@@ -1,0 +1,19 @@
+{
+    "files.watcherExclude": {
+        "**/*.pth": true,
+        "**/*.joblib": true,
+        "**/__pycache__/**": true,
+        "**/.venv/**": true,
+        "**/.git/**": true
+    },
+    "python.analysis.exclude": [
+        "**/*.pth",
+        "**/*.joblib",
+        "**/__pycache__/**",
+        "**/.venv/**"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportUnusedImport": "none",
+        "reportUnusedVariable": "none"
+    }
+}

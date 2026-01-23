@@ -105,10 +105,29 @@ def main():
         return
 
     # 2. Open Video Source
-    cap = cv2.VideoCapture(0) # 0 for Webcam
+    import sys
+    import os
+    
+    video_source = 0 # Default to webcam
+    if len(sys.argv) > 1:
+        video_path = sys.argv[1]
+        if os.path.exists(video_path):
+            video_source = video_path
+            print(f"Using video file: {video_source}")
+        else:
+            print(f"Warning: File {video_path} not found. Using webcam.")
+            
+    cap = cv2.VideoCapture(video_source)
     if not cap.isOpened():
-        print("Error: Could not open webcam.")
+        print(f"Error: Could not open video source {video_source}.")
         return
+    else:
+        # Debug info
+        length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        print(f"Video opened successfully. Total frames: {length}, FPS: {fps}")
+        if length == 0:
+            print("Warning: Video has 0 frames reported. It might be corrupt or codec is unsupported.")
 
     # --- Setup Mode: Draw Zone ---
     cv2.namedWindow("Setup: Draw Zone")
@@ -122,7 +141,10 @@ def main():
 
     while True:
         ret, frame = cap.read()
-        if not ret: break
+        if not ret:
+            # Loop video during setup so user can draw
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
         
         # Draw points and lines
         for pt in ZONE_POINTS:
@@ -165,10 +187,16 @@ def main():
     # To calculate real FPS
     loop_start_time = time.time()
     
+    # Reset video for main processing
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    
     while True:
         ret, frame = cap.read()
         if not ret:
-            break
+            # Loop video indefinitely so user can take screenshots/monitor
+            print("End of video. Looping...")
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
 
         start_time = time.time()
         
@@ -291,8 +319,13 @@ def main():
         cv2.imshow("Safe Zone Surveillance", frame)
         
         frame_count += 1
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
             break
+        elif key == ord('s'):
+            filename = f"screenshot_{int(time.time())}.png"
+            cv2.imwrite(filename, frame)
+            print(f"Screenshot saved to {filename}")
 
     cap.release()
     cv2.destroyAllWindows()
