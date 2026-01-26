@@ -127,6 +127,14 @@ app.get('/api/live-feed-url', (req, res) => {
     res.json({ url: `${PY_SERVICE_URL}/live-feed` });
 });
 
+// Health check endpoint for Render
+app.get('/', (req, res) => {
+    res.json({
+        status: 'ok',
+        service: 'SafeZone Backend',
+        timestamp: new Date().toISOString()
+    });
+});
 
 // Socket.IO for Real-time Alerts
 // We can listen to the Python service (via a separate channel or webhook) 
@@ -136,6 +144,8 @@ app.get('/api/live-feed-url', (req, res) => {
 
 // Listen
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`Node.js Backend running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Node.js Backend running on port ${PORT}`);
+    console.log(`MongoDB URI: ${MONGO_URI ? 'Configured' : 'Not configured'}`);
+    console.log(`Python Service URL: ${PY_SERVICE_URL}`);
 });
