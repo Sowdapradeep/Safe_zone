@@ -2,43 +2,34 @@
 
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
+  --background: #060608;
+  --foreground: #eef2f5;
+  --card: #0a0c10;
+  --card-foreground: #eef2f5;
+  --popover: #0a0c10;
+  --popover-foreground: #eef2f5;
+  --primary: #00f2ff;
+  --primary-foreground: #01080e;
+  --secondary: #12141c;
+  --secondary-foreground: #00f2ff;
+  --muted: #1a1d26;
+  --muted-foreground: #8a9bb0;
+  --accent: #0066cc;
+  --accent-foreground: #ffffff;
+  --destructive: #ff3366;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 242, 255, 0.15);
   --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+  --input-background: #0d0f14;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ring: #00f2ff;
+  --radius: 0.5rem;
+  
+  /* Cyber Aesthetics */
+  --cyber-blue: #00f2ff;
+  --cyber-blue-glow: rgba(0, 242, 255, 0.3);
+  --cyber-border: rgba(0, 242, 255, 0.2);
 }
 
 .dark {
@@ -120,62 +111,25 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+.cyber-glow {
+  box-shadow: 0 0 15px var(--cyber-blue-glow);
+}
 
-  body {
-    @apply bg-background text-foreground;
-  }
+.text-cyber-glow {
+  text-shadow: 0 0 8px var(--cyber-blue-glow);
+}
 
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
+.glass-panel {
+  background: rgba(10, 12, 16, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--cyber-border);
+}
 
-  html {
-    font-size: var(--font-size);
-  }
+@keyframes pulse-blue {
+  0%, 100% { opacity: 1; box-shadow: 0 0 15px var(--cyber-blue-glow); }
+  50% { opacity: 0.7; box-shadow: 0 0 5px var(--cyber-blue-glow); }
+}
 
-  h1 {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  h2 {
-    font-size: var(--text-xl);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  h3 {
-    font-size: var(--text-lg);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  h4 {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  label {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  button {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
-  }
-
-  input {
-    font-size: var(--text-base);
-    font-weight: var(--font-weight-normal);
-    line-height: 1.5;
-  }
+.animate-pulse-blue {
+  animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
