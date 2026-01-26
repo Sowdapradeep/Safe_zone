@@ -56,7 +56,15 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+        let errorMessage = `Server responded with ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.details) errorMessage = errorData.details;
+          else if (errorData.error) errorMessage = errorData.error;
+        } catch (e) {
+          // If not JSON, use default status message
+        }
+        throw new Error(errorMessage);
       }
 
       // Get the processed video blob
