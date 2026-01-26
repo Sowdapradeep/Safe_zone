@@ -2,9 +2,14 @@
 __pycache__/
 .venv/
 .env
+.env.local
+.env.production
 
 # Large model files
 *.pth
 *.joblib
 node_modules
-node_modules
+
+# Uploads
+uploads/
+server/uploads/

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -36,7 +37,7 @@ const upload = multer({ dest: 'uploads/' });
 
 // --- AI Service Integration (Python Microservice) ---
 // We assume the existing Python FastAPI is running on port 8000
-const PY_SERVICE_URL = 'http://127.0.0.1:8000';
+const PY_SERVICE_URL = process.env.PY_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // API Routes
 
@@ -54,7 +55,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
         const form = new FormData();
         form.append('file', fs.createReadStream(filePath), fileName);
 
-        console.log(`Forwarding ${fileName} to Python AI Service...`);
+        console.log(`Forwarding ${fileName} to Python AI Service at ${PY_SERVICE_URL}...`);
 
         const response = await axios.post(`${PY_SERVICE_URL}/analyze-video`, form, {
             headers: {

@@ -8,6 +8,9 @@ import { Shield, Activity } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 
+// Get API URL from environment variable, fallback to localhost for development
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export default function App() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -47,7 +50,7 @@ export default function App() {
       const formData = new FormData();
       formData.append('file', videoFile);
 
-      const response = await fetch('http://localhost:5000/api/analyze-video', {
+      const response = await fetch(`${API_URL}/api/analyze-video`, {
         method: 'POST',
         body: formData,
       });
@@ -154,7 +157,8 @@ export default function App() {
     if (!isMonitoring) return;
 
     // Note: Node.js backend might require socket.io client lib, but for raw ws if configured:
-    const socket = new WebSocket('ws://localhost:5000'); // If Node exposes raw WS or use Socket.IO client
+    const wsUrl = API_URL.replace('http', 'ws'); // Convert http:// to ws:// or https:// to wss://
+    const socket = new WebSocket(wsUrl);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);

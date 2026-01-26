@@ -1,0 +1,32 @@
+services:
+  # Node.js Backend Service
+  - type: web
+    name: safezone-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false  # You'll add this manually in Render dashboard
+      - key: PY_SERVICE_URL
+        sync: false  # Will be the URL of the Python service below
+      - key: PORT
+        value: 5000
+    healthCheckPath: /
+
+  # Python AI Service
+  - type: web
+    name: safezone-ai-service
+    env: python
+    plan: free
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn app:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8000
+    healthCheckPath: /
