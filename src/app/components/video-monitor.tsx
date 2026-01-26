@@ -30,7 +30,14 @@ export function VideoMonitor({
       const url = URL.createObjectURL(videoFile);
       videoRef.current.src = url;
 
-      return () => URL.revokeObjectURL(url);
+      // Auto-play when a new file (especially analyzed one) is loaded
+      videoRef.current.play().catch(err => {
+        console.warn("Autoplay failed, user interaction might be needed:", err);
+      });
+
+      return () => {
+        URL.revokeObjectURL(url);
+      };
     }
   }, [videoFile]);
 
@@ -156,6 +163,9 @@ export function VideoMonitor({
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             loop
+            autoPlay
+            muted
+            playsInline
           />
           <canvas
             ref={canvasRef}
