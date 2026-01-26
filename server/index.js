@@ -53,7 +53,10 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
 
         // Forward to Python Service
         const form = new FormData();
-        form.append('file', fs.createReadStream(filePath), fileName);
+        form.append('file', fs.createReadStream(filePath), {
+            filename: fileName,
+            contentType: 'video/mp4'
+        });
 
         console.log(`Forwarding ${fileName} to Python AI Service at ${PY_SERVICE_URL}...`);
 
@@ -61,12 +64,13 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             headers: {
                 ...form.getHeaders()
             },
-            responseType: 'stream', // We want the video stream back
-            timeout: 300000 // 5 minutes timeout to prevent hanging
+            responseType: 'stream',
+            timeout: 600000, // 10 minutes for large videos
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
         });
 
-        // Pipe the response directly back to the client
-        // We also need to forward the custom headers for anomalies
+        // Forward headers
         if (response.headers['x-anomaly-detected']) {
             res.set('X-Anomaly-Detected', response.headers['x-anomaly-detected']);
         }
@@ -75,24 +79,40 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
         }
 
         res.set('Content-Type', 'video/mp4');
+
+        // Handle stream errors
+        response.data.on('error', (err) => {
+            console.error('Download Stream Error:', err.message);
+            if (!res.headersSent) {
+                res.status(502).json({ error: 'Stream interrupted' });
+            }
+        });
+
         response.data.pipe(res);
 
         // Clean up temp file after a delay
         setTimeout(() => {
-            fs.unlink(filePath, () => { });
-        }, 60000);
+            if (fs.existsSync(filePath)) {
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error('Cleanup Error:', err.message);
+                });
+            }
+        }, 120000); // 2 minutes
 
     } catch (error) {
-        const errorMsg = error.response ?
-            `AI Service Error (${error.response.status}): ${JSON.stringify(error.response.data)}` :
-            `AI Service Error: ${error.message}`;
+        let errorMsg = error.message;
+        if (error.response) {
+            errorMsg = `AI Service Error (${error.response.status})`;
+            // Can't easily log data here as it's a stream
+        }
 
-        console.error(errorMsg);
-        res.status(502).json({
-            error: 'Failed to process video via AI service',
-            details: errorMsg,
-            target: `${PY_SERVICE_URL}/analyze-video`
-        });
+        console.error('Backend Error:', errorMsg);
+        if (!res.headersSent) {
+            res.status(502).json({
+                error: 'Failed to process video via AI service',
+                details: errorMsg
+            });
+        }
     }
 });
 
