@@ -3,7 +3,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
-const { Server } = require('socket.io');
+const { Server: SocketIOServer } = require('socket.io');
+const { WebSocketServer } = require('ws');
 const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
@@ -13,11 +14,28 @@ const Incident = require('./models/Incident');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+
+// 1. Socket.IO (for legacy support or other clients)
+const io = new SocketIOServer(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
     }
+});
+
+// 2. Raw WebSocket Server (for frontend App.tsx)
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', (ws) => {
+    console.log('New WS Client connected');
+    ws.on('close', () => console.log('WS Client disconnected'));
+});
+
+// Handle upgrade from HTTP to WS
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
 });
 
 // Middleware
@@ -132,7 +150,7 @@ app.post('/api/incidents', async (req, res) => {
         const saved = await newIncident.save();
 
         // Broadcast to connected clients
-        io.emit('new-incident', saved);
+        broadcastAnomaly(saved);
 
         res.status(201).json(saved);
     } catch (err) {
@@ -164,11 +182,18 @@ app.get('/', (req, res) => {
     });
 });
 
-// Socket.IO for Real-time Alerts
-// We can listen to the Python service (via a separate channel or webhook) 
-// OR the Python service pushes to *us*.
-// For now, let's assume the Python service speaks WS to port 8000 clients.
-// Ideally, we'd migrate Python to POST alerts to this Node server.
+// Socket.IO and WS for Real-time Alerts
+function broadcastAnomaly(data) {
+    // Broadcast via Socket.IO
+    io.emit('new-incident', data);
+
+    // Broadcast via Raw WebSocket
+    wss.clients.forEach((client) => {
+        if (client.readyState === 1) { // 1 = OPEN
+            client.send(JSON.stringify(data));
+        }
+    });
+}
 
 // Listen
 const PORT = process.env.PORT || 5000;

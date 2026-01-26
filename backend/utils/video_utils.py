@@ -26,16 +26,22 @@ def get_video_properties(cap):
 
 def create_video_writer(output_path, fps, width, height):
     """
-    Creates a VideoWriter object with avc1 (H.264) codec.
-    This is much more compatible with web browsers than mp4v.
+    Creates a VideoWriter object with a browser-compatible codec.
+    Tries multiple codecs to find one supported by the system.
     """
-    # Try avc1 first, fallback to mp4v if not available
-    try:
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')
-        writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-        if not writer.isOpened():
-             raise Exception("avc1 not supported")
-        return writer
-    except:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        return cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Prefer avc1/h264 for web compatibility
+    codecs = ['avc1', 'h264', 'H264', 'x264', 'X264', 'mp4v']
+    
+    for codec in codecs:
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*codec)
+            writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            if writer.isOpened():
+                print(f"Succesfully opened VideoWriter with codec: {codec}")
+                return writer
+        except Exception as e:
+            print(f"Codec {codec} failed: {e}")
+            continue
+            
+    # Final fallback attempt
+    return cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
