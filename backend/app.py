@@ -11,8 +11,9 @@ import sys
 # Add current directory to path so we can import from local modules if run directly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from inference import AnomalyDetector
 from utils.video_utils import resize_frame_smart, get_video_properties, create_video_writer
+import base64
+import time
 
 # --- Configuration ---
 # ROI will cover the lower half of the frame (like seats area in the image)
@@ -25,6 +26,11 @@ TARGET_RESIZE_WIDTH = 480 # Reduced from 640 to save memory
 
 # Global detector instance
 detector = AnomalyDetector(model_dir=os.path.join(os.path.dirname(__file__), "model"))
+
+# Persistent storage for analyzed videos (for local/render serving)
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "analyzed_videos")
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,7 +46,14 @@ app = FastAPI(title="Anomaly Detection API", lifespan=lifespan)
 
 @app.get("/")
 async def root():
-    return {"message": "Surveillance Anomaly Detection API is running (Backend Structure)"}
+    return {"message": "Surveillance Anomaly Detection API is running (Cyber Blue Edition)"}
+
+@app.get("/api/video/{filename}")
+async def get_video(filename: str):
+    file_path = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Video not found")
+    return FileResponse(file_path, media_type="video/webm" if filename.endswith('.webm') else "video/mp4")
 
 @app.post("/analyze-video")
 async def analyze_video(file: UploadFile = File(...)):
@@ -50,7 +63,12 @@ async def analyze_video(file: UploadFile = File(...)):
     # 1. Save uploaded file to temp
     temp_dir = tempfile.mkdtemp()
     file_path = os.path.join(temp_dir, file.filename)
-    output_path = os.path.join(temp_dir, f"analyzed_{file.filename}")
+    
+    # Analyze and save to persistent output dir
+    output_filename = f"analyzed_{int(time.time())}_{file.filename}"
+    if output_filename.endswith('.mp4'):
+        output_filename = output_filename.replace('.mp4', '.webm')
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
     
     try:
         with open(file_path, "wb") as buffer:
@@ -150,19 +168,19 @@ async def analyze_video(file: UploadFile = File(...)):
         cap.release()
         out.release()
 
+        # Encode frames to base64 for reliable transport
+        # Note: In a production environment, we'd use a real stream.
+        # For this tool, we'll return a JSON array of frames.
+        
         # Determine media type based on extension
-        res_media_type = "video/webm" if output_path.endswith('.webm') else "video/mp4"
-
-        return FileResponse(
-            path=output_path,
-            media_type=res_media_type,
-            filename=os.path.basename(output_path),
-            headers={
-                "X-Anomaly-Detected": str(anomaly_detected),
-                "X-Anomaly-Frames": ",".join(map(str, anomaly_frames)),
-                "X-Alert-Message": "Restricted Zone Anomaly Detected" if anomaly_detected else "No Anomaly Detected"
-            }
-        )
+        return {
+            "status": "success",
+            "anomaly_detected": anomaly_detected,
+            "anomaly_frames": anomaly_frames,
+            "total_frames": frame_idx,
+            "video_url": f"/api/video/{os.path.basename(output_path)}",
+            "filename": os.path.basename(output_path)
+        }
 
     except Exception as e:
         if os.path.exists(temp_dir):

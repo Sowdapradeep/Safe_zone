@@ -26,20 +26,29 @@ export function VideoMonitor({
   const [alertActive, setAlertActive] = useState(false);
 
   useEffect(() => {
-    if (videoFile && videoRef.current) {
-      const url = URL.createObjectURL(videoFile);
-      videoRef.current.src = url;
+    const video = videoRef.current;
+    if (!video) return;
 
-      // Auto-play when a new file (especially analyzed one) is loaded
-      videoRef.current.play().catch(err => {
-        console.warn("Autoplay failed, user interaction might be needed:", err);
-      });
-
-      return () => {
-        URL.revokeObjectURL(url);
-      };
+    let url = "";
+    if (videoFile) {
+      if (typeof videoFile === 'string') {
+        url = videoFile;
+      } else {
+        url = URL.createObjectURL(videoFile);
+      }
+      video.src = url;
+      video.play().catch(() => { });
+    } else if ((window as any)._processedVideoUrl && isMonitoring) {
+      video.src = (window as any)._processedVideoUrl;
+      video.play().catch(() => { });
     }
-  }, [videoFile]);
+
+    return () => {
+      if (url && !url.startsWith('http')) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [videoFile, isMonitoring]);
 
   useEffect(() => {
     const video = videoRef.current;

@@ -67,27 +67,27 @@ export default function App() {
         throw new Error(errorMessage);
       }
 
-      // Get the processed video blob
-      const blob = await response.blob();
-      const contentType = response.headers.get('content-type') || 'video/mp4';
-      const extension = contentType.includes('webm') ? '.webm' : '.mp4';
+      // Update UI with processed data
+      const data = await response.json();
+      console.log("Analysis results:", data);
 
-      const processedFile = new File([blob], `analyzed_${videoFile.name.split('.')[0]}${extension}`, {
-        type: contentType
-      });
+      // Instead of a blob, we point to the static file on the server
+      const backendBaseUrl = API_URL.includes('localhost') ? API_URL : API_URL;
+      const remoteUrl = `${backendBaseUrl}/uploads/${data.video_url.split('/').pop()}`;
 
-      // Update UI with processed video
-      setVideoFile(processedFile);
       setIsMonitoring(true);
       setSystemState('monitoring');
 
+      // We don't setVideoFile yet, we'll let the monitor handle the URL
+      (window as any)._processedVideoUrl = remoteUrl;
+
       // Parse headers for anomalies
-      const anomalyDetected = response.headers.get('x-anomaly-detected') === 'True';
+      const anomalyDetected = data.anomaly_detected;
       if (anomalyDetected) {
         // Trigger an initial alert if immediate anomalies were found
-        const anomalyFrames = response.headers.get('x-anomaly-frames');
+        const anomalyFrames = data.anomaly_frames;
         toast.error('Security Alert', {
-          description: `Anomalies detected in processed feed. Frames: ${anomalyFrames}`,
+          description: `Anomalies detected in processed feed. Frames: ${anomalyFrames.length}`,
           duration: 5000
         });
         setThreatLevel('high');

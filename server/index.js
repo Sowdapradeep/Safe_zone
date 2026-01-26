@@ -41,6 +41,7 @@ server.on('upgrade', (request, socket, head) => {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 // Replace with your actual Mongo URI or use localhost
@@ -82,11 +83,13 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             headers: {
                 ...form.getHeaders()
             },
-            responseType: 'stream',
             timeout: 600000, // 10 minutes for large videos
             maxContentLength: Infinity,
             maxBodyLength: Infinity
         });
+
+        console.log(`Analysis complete for ${fileName}`);
+        res.json(response.data);
 
         // Forward headers
         if (response.headers['x-anomaly-detected']) {

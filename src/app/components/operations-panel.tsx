@@ -38,14 +38,14 @@ export function OperationsPanel({
   };
 
   return (
-    <div className="bg-zinc-950 border border-yellow-900/30 rounded-lg p-5 space-y-5">
-      <h3 className="text-base font-bold text-yellow-400 uppercase tracking-wider border-b border-yellow-900/30 pb-3">
+    <div className="bg-slate-950/50 border border-cyan-900/30 rounded-lg p-5 space-y-5 backdrop-blur-md">
+      <h3 className="text-base font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-900/30 pb-3">
         Operations Control
       </h3>
 
       {/* Video Upload */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-yellow-600">Feed Source</Label>
+        <Label className="text-sm font-medium text-slate-500">Feed Source</Label>
         <div className="relative">
           <input
             type="file"
@@ -59,7 +59,7 @@ export function OperationsPanel({
             <Button
               type="button"
               variant="outline"
-              className="w-full justify-start bg-zinc-900 border-yellow-900/30 hover:bg-zinc-800 hover:border-yellow-700 text-yellow-100 h-12 text-base"
+              className="w-full justify-start bg-slate-900/50 border-cyan-900/30 hover:bg-slate-800 hover:border-cyan-500 text-cyan-100 h-12 text-base"
               disabled={isMonitoring || isProcessing}
               asChild
             >
@@ -71,19 +71,19 @@ export function OperationsPanel({
           </label>
         </div>
         {uploadedFileName && (
-          <p className="text-sm text-lime-400 font-medium">✓ {uploadedFileName}</p>
+          <p className="text-sm text-cyan-400 font-medium">✓ {uploadedFileName}</p>
         )}
       </div>
 
 
       {/* Monitoring Control */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-yellow-600">Monitoring Control</Label>
+        <Label className="text-sm font-medium text-slate-500">Monitoring Control</Label>
         {!isMonitoring ? (
           <Button
             onClick={onStartMonitoring}
             disabled={!hasVideo || isProcessing}
-            className="w-full bg-lime-600 hover:bg-lime-700 text-black font-bold h-12 text-base"
+            className="w-full bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold h-12 text-base shadow-[0_0_20px_rgba(8,145,178,0.3)] transition-all"
           >
             {isProcessing ? (
               <>
@@ -109,9 +109,9 @@ export function OperationsPanel({
       </div>
 
       {/* ROI Toggle */}
-      <div className="flex items-center justify-between bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
+      <div className="flex items-center justify-between bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4">
         <div className="flex flex-col gap-1">
-          <Label htmlFor="roi-toggle" className="text-sm font-medium text-yellow-200 cursor-pointer">
+          <Label htmlFor="roi-toggle" className="text-sm font-medium text-cyan-100 cursor-pointer">
             Restricted Zone Overlay
           </Label>
           <span className="text-xs text-gray-500">Show ROI boundaries</span>
@@ -130,7 +130,7 @@ export function OperationsPanel({
           onClick={onScanIncidents}
           disabled={!isMonitoring}
           variant="outline"
-          className="w-full bg-yellow-900/30 border-yellow-700 hover:bg-yellow-900/50 text-yellow-300 h-11 text-base"
+          className="w-full bg-slate-900/50 border-cyan-700 hover:bg-cyan-900/20 text-cyan-300 h-11 text-base"
         >
           <Search className="w-5 h-5 mr-2" />
           Manual Incident Scan
@@ -138,10 +138,10 @@ export function OperationsPanel({
       </div>
 
       {/* System Status Indicator */}
-      <div className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
+      <div className="bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-yellow-600">System Mode</span>
-          <span className={`text-sm font-bold ${isMonitoring ? 'text-lime-400' : 'text-gray-500'}`}>
+          <span className="text-sm font-medium text-slate-500">System Mode</span>
+          <span className={`text-sm font-bold ${isMonitoring ? 'text-cyan-400' : 'text-slate-600'}`}>
             {isMonitoring ? 'ACTIVE' : 'STANDBY'}
           </span>
         </div>
