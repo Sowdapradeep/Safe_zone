@@ -95,11 +95,11 @@ export default function App() {
         icon: <Activity className="w-4 h-4" />
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Analysis failed:', error);
       toast.dismiss('processing-toast');
       toast.error('System Error', {
-        description: 'Failed to connect to analysis server. Ensure backend is running.',
+        description: error.message || 'Failed to connect to analysis server. Ensure backend is running.',
       });
       setIsMonitoring(false);
     } finally {
