@@ -71,14 +71,13 @@ export default function App() {
       const data = await response.json();
       console.log("Analysis results:", data);
 
-      // Instead of a blob, we point to the static file on the server
-      const backendBaseUrl = API_URL.includes('localhost') ? API_URL : API_URL;
-      const remoteUrl = `${backendBaseUrl}/uploads/${data.video_url.split('/').pop()}`;
+      // Instead of a blob, we point to the proxy endpoint on the Node server
+      const remoteUrl = `${API_URL}/api/video/${data.filename}`;
 
       setIsMonitoring(true);
       setSystemState('monitoring');
 
-      // We don't setVideoFile yet, we'll let the monitor handle the URL
+      // We don't setVideoFile to a File object, we use the URL directly
       (window as any)._processedVideoUrl = remoteUrl;
 
       // Parse headers for anomalies
