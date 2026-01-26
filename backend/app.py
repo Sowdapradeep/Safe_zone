@@ -11,6 +11,7 @@ import sys
 # Add current directory to path so we can import from local modules if run directly
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from inference import AnomalyDetector
 from utils.video_utils import resize_frame_smart, get_video_properties, create_video_writer
 import base64
 import time

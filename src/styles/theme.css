@@ -25,7 +25,7 @@
   --font-weight-normal: 400;
   --ring: #00f2ff;
   --radius: 0.5rem;
-  
+
   /* Cyber Aesthetics */
   --cyber-blue: #00f2ff;
   --cyber-blue-glow: rgba(0, 242, 255, 0.3);
@@ -111,25 +111,34 @@
 }
 
 @layer base {
-.cyber-glow {
-  box-shadow: 0 0 15px var(--cyber-blue-glow);
-}
+  .cyber-glow {
+    box-shadow: 0 0 15px var(--cyber-blue-glow);
+  }
 
-.text-cyber-glow {
-  text-shadow: 0 0 8px var(--cyber-blue-glow);
-}
+  .text-cyber-glow {
+    text-shadow: 0 0 8px var(--cyber-blue-glow);
+  }
 
-.glass-panel {
-  background: rgba(10, 12, 16, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--cyber-border);
-}
+  .glass-panel {
+    background: rgba(10, 12, 16, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--cyber-border);
+  }
 
-@keyframes pulse-blue {
-  0%, 100% { opacity: 1; box-shadow: 0 0 15px var(--cyber-blue-glow); }
-  50% { opacity: 0.7; box-shadow: 0 0 5px var(--cyber-blue-glow); }
-}
+  @keyframes pulse-blue {
 
-.animate-pulse-blue {
-  animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 15px var(--cyber-blue-glow);
+    }
+
+    50% {
+      opacity: 0.7;
+      box-shadow: 0 0 5px var(--cyber-blue-glow);
+    }
+  }
+
+  .animate-pulse-blue {
+    animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }

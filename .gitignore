@@ -13,3 +13,5 @@ node_modules
 # Uploads
 uploads/
 server/uploads/
+dist/
+backend/analyzed_videos/
