@@ -83,8 +83,16 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
         }, 60000);
 
     } catch (error) {
-        console.error('AI Service Error:', error.message);
-        res.status(502).json({ error: 'Failed to process video via AI service' });
+        const errorMsg = error.response ?
+            `AI Service Error (${error.response.status}): ${JSON.stringify(error.response.data)}` :
+            `AI Service Error: ${error.message}`;
+
+        console.error(errorMsg);
+        res.status(502).json({
+            error: 'Failed to process video via AI service',
+            details: errorMsg,
+            target: `${PY_SERVICE_URL}/analyze-video`
+        });
     }
 });
 
