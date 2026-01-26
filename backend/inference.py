@@ -23,6 +23,7 @@ class AnomalyDetector:
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
+        self.is_half = False
 
     def load_models(self):
         print(f"Loading models onto {self.device}...")
@@ -35,13 +36,17 @@ class AnomalyDetector:
         if not os.path.exists(anomaly_path):
             raise FileNotFoundError(f"Anomaly model not found at {anomaly_path}")
 
-        # 1. Feature Extractor
+        # 1. Feature Extractor - Half-precision optimization
         self.vit_model = torchvision.models.vit_b_16(pretrained=False)
         state_dict = torch.load(vit_path, map_location=self.device)
         self.vit_model.load_state_dict(state_dict, strict=False)
         self.vit_model.heads = torch.nn.Identity()
         self.vit_model.to(self.device)
+        if self.device.type == 'cpu':
+            self.vit_model.half()
+            self.is_half = True
         self.vit_model.eval()
+        del state_dict # Cleanup memory immediately
 
         # 2. Anomaly Detector
         self.anomaly_model = joblib.load(anomaly_path)
@@ -55,8 +60,11 @@ class AnomalyDetector:
             return None
         
         batch_tensors = torch.stack(patches).to(self.device)
+        if self.is_half:
+            batch_tensors = batch_tensors.half()
+            
         with torch.no_grad():
-            features = self.vit_model(batch_tensors).cpu().numpy()
+            features = self.vit_model(batch_tensors).cpu().float().numpy()
         return features
 
     def score_anomalies(self, features):

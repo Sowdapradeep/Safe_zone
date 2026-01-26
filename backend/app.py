@@ -19,8 +19,8 @@ ROI_HEIGHT_RATIO = 0.5  # Use bottom 50% of frame height
 ANOMALY_THRESHOLD = -0.05
 PATCH_SIZE = 224
 STRIDE = 224  # No overlap for faster processing
-FRAME_SKIP = 20  # Process every 20th frame for speed
-TARGET_RESIZE_WIDTH = 640
+FRAME_SKIP = 30  # Process every 30th frame for speed
+TARGET_RESIZE_WIDTH = 480 # Reduced from 640 to save memory
 
 # Global detector instance
 detector = AnomalyDetector(model_dir=os.path.join(os.path.dirname(__file__), "model"))
@@ -139,6 +139,11 @@ async def analyze_video(file: UploadFile = File(...)):
             # Write frame
             out.write(frame)
             frame_idx += 1
+            
+            # Periodically force garbage collection
+            if frame_idx % 300 == 0:
+                import gc
+                gc.collect()
 
         cap.release()
         out.release()
