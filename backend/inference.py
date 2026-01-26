@@ -73,5 +73,4 @@ class AnomalyDetector:
         """
         patch_rgb = cv2.cvtColor(patch_bgr, cv2.COLOR_BGR2RGB)
         return self.transform(patch_rgb)
-    
-    import cv2 # Local import for checking types if needed, or just rely on passed objects
+

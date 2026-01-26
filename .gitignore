@@ -6,3 +6,4 @@ __pycache__/
 # Large model files
 *.pth
 *.joblib
+node_modules
