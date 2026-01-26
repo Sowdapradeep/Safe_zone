@@ -99,7 +99,7 @@ export default function App() {
       console.error('Analysis failed:', error);
       toast.dismiss('processing-toast');
       toast.error('System Error', {
-        description: error.message || 'Failed to connect to analysis server. Ensure backend is running.',
+        description: `Target: ${API_URL} | Error: ${error.message || 'Unknown network error'}. Ensure backend is running and CORS is allowed.`,
       });
       setIsMonitoring(false);
     } finally {
