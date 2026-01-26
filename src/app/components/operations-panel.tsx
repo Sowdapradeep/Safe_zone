@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Upload, Play, Square, Search, RotateCcw } from 'lucide-react';
-import { Button } from '@/app/components/ui/button';
-import { Label } from '@/app/components/ui/label';
-import { Switch } from '@/app/components/ui/switch';
+import { Button } from './ui/button';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
 
 interface OperationsPanelProps {
   onVideoUpload: (file: File) => void;

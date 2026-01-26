@@ -1,5 +1,5 @@
 import { Camera, MapPin, Wrench, Calendar, Activity } from 'lucide-react';
-import { Badge } from '@/app/components/ui/badge';
+import { Badge } from './ui/badge';
 
 interface CameraAssetInfoProps {
   cameraId: string;

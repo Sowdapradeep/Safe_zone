@@ -1,5 +1,5 @@
 import { Activity, Camera, Shield, AlertCircle } from 'lucide-react';
-import { Badge } from '@/app/components/ui/badge';
+import { Badge } from './ui/badge';
 
 interface SystemStatusPanelProps {
   systemState: 'idle' | 'monitoring' | 'alert' | 'maintenance';

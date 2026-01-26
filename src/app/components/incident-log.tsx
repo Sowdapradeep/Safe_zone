@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { Badge } from '@/app/components/ui/badge';
-import { Button } from '@/app/components/ui/button';
-import { ScrollArea } from '@/app/components/ui/scroll-area';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
 
 export interface Incident {
   id: string;
@@ -81,18 +81,17 @@ export function IncidentLog({
         <h3 className="text-base font-bold text-yellow-400 uppercase tracking-wider mb-4">
           Incident Management
         </h3>
-        
+
         {/* Filter Tabs */}
         <div className="flex gap-2">
           {['all', 'open', 'in-progress', 'closed'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 text-sm font-medium rounded ${
-                filter === f
+              className={`px-4 py-2 text-sm font-medium rounded ${filter === f
                   ? 'bg-yellow-600 text-black font-semibold'
                   : 'bg-zinc-900 border border-yellow-900/30 text-yellow-700 hover:bg-zinc-800'
-              }`}
+                }`}
             >
               {f === 'all' ? 'All' : f.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
               {f !== 'all' && (

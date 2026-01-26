@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
-import { VideoMonitor } from '@/app/components/video-monitor';
-import { SystemStatusPanel } from '@/app/components/system-status-panel';
-import { OperationsPanel } from '@/app/components/operations-panel';
-import { IncidentLog, Incident } from '@/app/components/incident-log';
-import { CameraAssetInfo } from '@/app/components/camera-asset-info';
+import { VideoMonitor } from './components/video-monitor';
+import { SystemStatusPanel } from './components/system-status-panel';
+import { OperationsPanel } from './components/operations-panel';
+import { IncidentLog, Incident } from './components/incident-log';
+import { CameraAssetInfo } from './components/camera-asset-info';
 import { Shield, Activity } from 'lucide-react';
-import { Toaster } from '@/app/components/ui/sonner';
+import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 
 export default function App() {
