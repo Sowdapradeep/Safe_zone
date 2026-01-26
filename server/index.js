@@ -89,27 +89,6 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
         });
 
         console.log(`Analysis complete for ${fileName}`);
-        res.json(response.data);
-
-        // Forward headers
-        if (response.headers['x-anomaly-detected']) {
-            res.set('X-Anomaly-Detected', response.headers['x-anomaly-detected']);
-        }
-        if (response.headers['x-anomaly-frames']) {
-            res.set('X-Anomaly-Frames', response.headers['x-anomaly-frames']);
-        }
-
-        res.set('Content-Type', response.headers['content-type'] || 'video/mp4');
-
-        // Handle stream errors
-        response.data.on('error', (err) => {
-            console.error('Download Stream Error:', err.message);
-            if (!res.headersSent) {
-                res.status(502).json({ error: 'Stream interrupted' });
-            }
-        });
-
-        response.data.pipe(res);
 
         // Clean up temp file after a delay
         setTimeout(() => {
@@ -120,11 +99,12 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             }
         }, 120000); // 2 minutes
 
+        return res.json(response.data);
+
     } catch (error) {
         let errorMsg = error.message;
-        if (error.response) {
-            errorMsg = `AI Service Error (${error.response.status})`;
-            // Can't easily log data here as it's a stream
+        if (error.response && error.response.data) {
+            errorMsg = error.response.data.detail || error.message;
         }
 
         console.error('Backend Error:', errorMsg);
@@ -136,6 +116,22 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
         }
     }
 });
+
+// 2. Proxy for Analyzed Video Files
+app.get('/api/video/:filename', async (req, res) => {
+    try {
+        console.log(`Proxying video request: ${req.params.filename}`);
+        const response = await axios.get(`${PY_SERVICE_URL}/api/video/${req.params.filename}`, {
+            responseType: 'stream'
+        });
+        res.set('Content-Type', response.headers['content-type']);
+        response.data.pipe(res);
+    } catch (error) {
+        console.error('Video Proxy Error:', error.message);
+        res.status(404).send('Video not found');
+    }
+});
+
 
 // 2. Incident Management
 app.get('/api/incidents', async (req, res) => {
