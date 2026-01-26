@@ -96,7 +96,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             res.set('X-Anomaly-Frames', response.headers['x-anomaly-frames']);
         }
 
-        res.set('Content-Type', 'video/mp4');
+        res.set('Content-Type', response.headers['content-type'] || 'video/mp4');
 
         // Handle stream errors
         response.data.on('error', (err) => {

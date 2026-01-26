@@ -72,7 +72,8 @@ async def analyze_video(file: UploadFile = File(...)):
         print(f"Processing at resolution: {width}x{height} (Original: {orig_width}x{orig_height})")
 
         # Create video writer
-        out = create_video_writer(output_path, fps, width, height)
+        out, actual_output_path = create_video_writer(output_path, fps, width, height)
+        output_path = actual_output_path # Update to the actual path used (might be .webm)
 
         # Calculate ROI: Full width, lower half of frame
         roi_x = 0
@@ -149,10 +150,13 @@ async def analyze_video(file: UploadFile = File(...)):
         cap.release()
         out.release()
 
+        # Determine media type based on extension
+        res_media_type = "video/webm" if output_path.endswith('.webm') else "video/mp4"
+
         return FileResponse(
             path=output_path,
-            media_type="video/mp4",
-            filename=f"analyzed_{file.filename}",
+            media_type=res_media_type,
+            filename=os.path.basename(output_path),
             headers={
                 "X-Anomaly-Detected": str(anomaly_detected),
                 "X-Anomaly-Frames": ",".join(map(str, anomaly_frames)),

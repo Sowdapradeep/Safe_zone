@@ -69,7 +69,12 @@ export default function App() {
 
       // Get the processed video blob
       const blob = await response.blob();
-      const processedFile = new File([blob], `analyzed_${videoFile.name}`, { type: 'video/mp4' });
+      const contentType = response.headers.get('content-type') || 'video/mp4';
+      const extension = contentType.includes('webm') ? '.webm' : '.mp4';
+
+      const processedFile = new File([blob], `analyzed_${videoFile.name.split('.')[0]}${extension}`, {
+        type: contentType
+      });
 
       // Update UI with processed video
       setVideoFile(processedFile);
