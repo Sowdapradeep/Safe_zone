@@ -108,6 +108,9 @@ To ensure versatility in evaluation, the system supports two distinct input mode
 - **Frontend**: React (Vite), Tailwind CSS, Lucide Icons, Shadcn UI (components).
 - **Backend (API & Logic)**: Node.js (Express), Python (FastAPI).
 - **AI / ML**: PyTorch, TorchVision (ViT), Scikit-learn (Isolation Forest), OpenCV.
+
+> [!TIP]
+> **Technical Deep-Dive**: For a detailed breakdown of the AI models and architecture, see [TECHNICAL_DETAILS.md](file:///p:/finished%20project/safe%20zone%20survillence/TECHNICAL_DETAILS.md).
 - **Storage**: MongoDB.
 - **Real-time**: WebSockets (WS).
 
