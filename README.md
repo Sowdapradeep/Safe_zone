@@ -1,6 +1,13 @@
-# 
+# CCTV Maintenance & Monitoring System with Real-Time Anomaly Detection (MVP)
 
-![Dashboard Preview](assets/dashboard_preview.png)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://safe-zone-hgawy9rjs-sowdapradeeps-projects.vercel.app)
+[![AI Service](https://img.shields.io/badge/AI-Service-blue)](https://safezone-ai-service.onrender.com)
+
+![Dashboard Preview](assets/monitoring_active.png)
+
+## 🌐 Live Deployment
+- **Frontend (Vercel)**: [https://safe-zone-hgawy9rjs-sowdapradeeps-projects.vercel.app](https://safe-zone-hgawy9rjs-sowdapradeeps-projects.vercel.app)
+- **AI Backend (Render)**: [https://safezone-ai-service.onrender.com](https://safezone-ai-service.onrender.com)
 
 ## 1. Project Overview
 The **CCTV Maintenance & Monitoring System** is a professional-grade control-room simulation designed to enhance security oversight through AI-driven automation. Unlike standard video viewing applications, this system integrates **asset health tracking**, **maintenance scheduling awareness**, and **real-time anomaly detection**. 
