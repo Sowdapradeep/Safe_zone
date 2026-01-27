@@ -3,6 +3,6 @@ uvicorn
 python-multipart
 torch
 torchvision
-opencv-python-headless
+opencv-python
 joblib
 numpy

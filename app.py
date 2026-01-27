@@ -152,8 +152,8 @@ async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = Fi
         
         print(f"Starting analysis: {file.filename} ({orig_width}x{orig_height} @ {fps}fps, {total_frames} frames)")
         
-        # Optimization resolution
-        TARGET_WIDTH = 640
+        # Optimization resolution - Reduced for CPU speed
+        TARGET_WIDTH = 480
         scale = 1.0
         if orig_width > TARGET_WIDTH:
             scale = TARGET_WIDTH / orig_width
@@ -175,7 +175,7 @@ async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = Fi
         ]
         zone_array = np.array(ZONE_POINTS, dtype=np.int32)
 
-        SKIP_FRAMES = 10 # Process every 10th frame for speed
+        SKIP_FRAMES = 25 # Process every 25th frame for speed on CPU
         anomaly_detected = False
         anomaly_frames = []
         frame_count = 0
@@ -337,7 +337,7 @@ async def gen_live_frames():
     ]
     zone_array = np.array(ZONE_POINTS, dtype=np.int32)
     
-    SKIP_FRAMES = 5
+    SKIP_FRAMES = 15 # Increased for CPU stability
     frame_count = 0
     last_detections = []
     fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
