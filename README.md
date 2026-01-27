@@ -1,4 +1,4 @@
-# CCTV Maintenance & Monitoring System with Real-Time Anomaly Detection (MVP)
+# 
 
 ![Dashboard Preview](assets/dashboard_preview.png)
 
@@ -66,31 +66,30 @@ To ensure versatility in evaluation, the system supports two distinct input mode
 - **Goal**: Create a model capable of identifying "unusual" behavior without supervised labels.
 - **Implementation**: Leveraged a pre-trained ViT for feature extraction and an Isolation Forest for outlier detection.
 - **Outcome**: A robust backend capable of assigning an "anomaly score" to any given image patch.
-- *See Screenshot – Phase 1*
+![AI Detection Logic](docs/screenshots/processing_flow.png)
 
 ### Phase 2: Restricted Zone (ROI) Logic & Visual Marking
 - **Goal**: Narrow the AI's focus to specific areas.
 - **Implementation**: Developed ROI masks and integrated motion detection (MOG2) to trigger analysis only when movement is detected in the zone.
 - **Outcome**: Massive reduction in CPU overhead and false positives from background movement.
-- *See Screenshot – Phase 2*
+![Restricted Zone Setup](docs/screenshots/monitoring_dashboard.png)
 
 ### Phase 3: Backend API for AI Inference
 - **Goal**: Build a scalable bridge between the AI logic and the UI.
 - **Implementation**: Created a FastAPI (Python) service for AI tasks and a Node.js/Express service for system management and incident persistence.
 - **Outcome**: A non-blocking, multi-service architecture that handles long-running video analysis.
-- *See Screenshot – Phase 3*
 
 ### Phase 4: CCTV Monitoring Dashboard (MVP UI)
 - **Goal**: Design a professional, control-room style user interface.
 - **Implementation**: Built a React-based SPA with high-contrast, premium aesthetics (glassmorphism/dark mode).
 - **Outcome**: A functional dashboard that displays feed, telemetry, and incident logs simultaneously.
-![Dashboard UI](assets/dashboard_preview.png)
+![Monitoring Dashboard Active](assets/monitoring_active.png)
 
 ### Phase 5: Real-Time Playback & Demo Integration
 - **Goal**: Combine the UI with the backend for end-to-end monitoring.
 - **Implementation**: Integrated WebSockets for real-time alerts and a proxy-based video delivery system for processed feeds.
 - **Outcome**: A complete lifecycle from video upload to anomaly detection and incident resolution.
-- *See Screenshot – Phase 5*
+![Anomaly Alert Condition](assets/anomaly_alert.png)
 
 ## 7. System Architecture
 1. **Input Layer**: Video File Upload or Webcam Stream.
