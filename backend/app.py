@@ -4,6 +4,7 @@ import os
 import tempfile
 import shutil
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import sys
@@ -44,6 +45,15 @@ async def lifespan(app: FastAPI):
     # Cleanup if needed
 
 app = FastAPI(title="Anomaly Detection API", lifespan=lifespan)
+
+# Add CORS Middleware to allow requests from Vercel/Render
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, replace with specific Vercel URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():
