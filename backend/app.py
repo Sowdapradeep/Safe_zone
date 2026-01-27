@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from inference import AnomalyDetector
 from utils.video_utils import resize_frame_smart, get_video_properties, create_video_writer
+from utils.tracker import CentroidTracker
 import base64
 import time
 
@@ -99,6 +100,10 @@ def process_video_sync(file_path, output_path, output_filename):
         # MOG2 Background Subtractor for Motion Detection
         fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=25, detectShadows=True)
 
+        # Object Tracker
+        ct = CentroidTracker(maxDisappeared=30)
+        object_anomalies = {} # objectID -> (is_anomaly, score)
+
         anomaly_detected = False
         anomaly_frames = []
         frame_idx = 0
@@ -138,45 +143,61 @@ def process_video_sync(file_path, output_path, output_filename):
             # 2. Find Contours (Moving Objects)
             contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
-            candidates = []
-            candidate_boxes = []
-            
+            rects = []
             for contour in contours:
-                if cv2.contourArea(contour) > 800: # Min area threshold
-                    cx, cy, cw, ch = cv2.boundingRect(contour)
-                    
-                    # Expand box slightly
-                    pad = 10
-                    cx1, cy1 = max(0, cx - pad), max(0, cy - pad)
-                    cx2, cy2 = min(w, cx + cw + pad), min(h, cy + ch + pad)
-                    
-                    crop = roi_frame[cy1:cy2, cx1:cx2]
-                    
-                    if crop.size > 0:
-                        candidates.append(detector.preprocess_patch(crop))
-                        candidate_boxes.append((x + cx1, y + cy1, cx2 - cx1, cy2 - cy1))
+                if cv2.contourArea(contour) > 800:
+                    bx, by, bw, bh = cv2.boundingRect(contour)
+                    # Convert to startX, startY, endX, endY for tracker
+                    rects.append((x + bx, y + by, x + bx + bw, y + by + bh))
 
-            # 3. Analyze Candidates
-            if candidates and (frame_idx % (FRAME_SKIP // 2) == 0):
-                 features = detector.extract_features(candidates)
-                 scores = detector.score_anomalies(features)
-                 
-                 for score, (bx, by, bw, bh) in zip(scores, candidate_boxes):
-                     if score < ANOMALY_THRESHOLD:
-                         frame_has_anomaly = True
-                         cv2.rectangle(frame, (bx, by), (bx + bw, by + bh), (0, 0, 255), 2)
-                         cv2.putText(frame, f"ANOMALY {score:.2f}", (bx, by - 5),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                     else:
-                         cv2.rectangle(frame, (bx, by), (bx + bw, by + bh), (0, 255, 0), 1)
+            # 3. Update Tracker
+            tracked_objects = ct.update(rects)
             
+            frame_has_anomaly = False
+
+            # 4. Analyze Tracked Objects
+            for (objectID, rect) in tracked_objects.items():
+                tx1, ty1, tx2, ty2 = rect
+                
+                # Visual feedback: Draw box and ID
+                cv2.rectangle(frame, (tx1, ty1), (tx2, ty2), (0, 255, 0), 1)
+                cv2.putText(frame, f"ID: {objectID}", (tx1, ty1 - 10),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+                # Only run inference periodically for each object
+                if frame_idx % (FRAME_SKIP // 2) == 0:
+                    crop = frame[ty1:ty2, tx1:tx2]
+                    if crop.size > 0:
+                        patch = detector.preprocess_patch(crop)
+                        features = detector.extract_features([patch])
+                        scores = detector.score_anomalies(features)
+                        score = scores[0]
+                        
+                        is_anomalous = score < ANOMALY_THRESHOLD
+                        object_anomalies[objectID] = (is_anomalous, score)
+                
+                # Check stored status
+                if objectID in object_anomalies:
+                    is_anomalous, score = object_anomalies[objectID]
+                    if is_anomalous:
+                        frame_has_anomaly = True
+                        cv2.rectangle(frame, (tx1, ty1), (tx2, ty2), (0, 0, 255), 2)
+                        cv2.putText(frame, f"ANOMALY {score:.2f}", (tx1, ty1 - 25),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
             if frame_has_anomaly:
                 anomaly_detected = True
                 anomaly_frames.append(frame_idx)
                 cv2.putText(frame, "!!! ANOMALY DETECTED !!!", (20, 40),
                            cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 0, 255), 2)
 
+            # Write frame
             out.write(frame)
+            
+            # Cleanup object_anomalies for disappeared objects
+            if frame_idx % 100 == 0:
+                current_ids = set(tracked_objects.keys())
+                object_anomalies = {k: v for k, v in object_anomalies.items() if k in current_ids}
             frame_idx += 1
             
             if frame_idx % 300 == 0:
