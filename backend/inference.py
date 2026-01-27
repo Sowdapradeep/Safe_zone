@@ -43,8 +43,9 @@ class AnomalyDetector:
         self.vit_model.heads = torch.nn.Identity()
         self.vit_model.to(self.device)
         if self.device.type == 'cpu':
-            self.vit_model.half()
-            self.is_half = True
+            pass # half() on CPU is often slower, so we stick to float32
+            # self.vit_model.half()
+            # self.is_half = True
         self.vit_model.eval()
         del state_dict # Cleanup memory immediately
 

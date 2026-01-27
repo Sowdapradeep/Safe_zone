@@ -22,7 +22,7 @@ ROI_HEIGHT_RATIO = 0.5  # Use bottom 50% of frame height
 ANOMALY_THRESHOLD = -0.05
 PATCH_SIZE = 224
 STRIDE = 224  # No overlap for faster processing
-FRAME_SKIP = 30  # Process every 30th frame for speed
+FRAME_SKIP = 60  # Process every 60th frame (approx every 2 seconds at 30fps)
 TARGET_RESIZE_WIDTH = 800 # Increased to ensure ROI > 224px height
 
 # Global detector instance
