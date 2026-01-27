@@ -20,10 +20,22 @@ export default function App() {
   const [threatLevel, setThreatLevel] = useState<'low' | 'medium' | 'high'>('low');
   const [lastAnomalyConfidence, setLastAnomalyConfidence] = useState<number | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
-
-
-
-
+  const [anomalyFrames, setAnomalyFrames] = useState<number[]>([]);
+  const [videoFPS, setVideoFPS] = useState<number>(30);
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/incidents`);
+        if (response.ok) {
+          const data = await response.json();
+          setIncidents(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch incidents:", err);
+      }
+    };
+    fetchIncidents();
+  }, []);
 
   const handleVideoUpload = useCallback((file: File) => {
 
@@ -83,14 +95,17 @@ export default function App() {
       // Parse headers for anomalies
       const anomalyDetected = data.anomaly_detected;
       if (anomalyDetected) {
-        // Trigger an initial alert if immediate anomalies were found
-        const anomalyFrames = data.anomaly_frames;
+        setAnomalyFrames(data.anomaly_frames || []);
+        setVideoFPS(data.fps || 30);
+
         toast.error('Security Alert', {
-          description: `Anomalies detected in processed feed. Frames: ${anomalyFrames.length}`,
+          description: `Anomalies detected in processed feed. Frames: ${data.anomaly_frames?.length || 0}`,
           duration: 5000
         });
         setThreatLevel('high');
         setSystemState('alert');
+      } else {
+        setAnomalyFrames([]);
       }
 
       toast.dismiss('processing-toast');
@@ -137,9 +152,8 @@ export default function App() {
       setThreatLevel('low');
     }
 
-    // Create new incident
-    const newIncident: Incident = {
-      id: `incident-${Date.now()}`,
+    // Create new incident object
+    const incidentData = {
       cameraId: 'CAM-001-NE',
       location: 'Building A / Floor 2 / Zone North-East',
       zone: anomaly.zone,
@@ -151,12 +165,29 @@ export default function App() {
       description: `AI-detected anomalous activity in ${anomaly.zone}. Confidence: ${(anomaly.confidence * 100).toFixed(1)}%. Requires operator review.`
     };
 
-    setIncidents(prev => [newIncident, ...prev]);
+    // 1. Post to Server (Persistence)
+    fetch(`${API_URL}/api/incidents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(incidentData)
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const savedIncident = await res.json();
+          // 2. Update local state with the saved object from DB (has real ID)
+          setIncidents(prev => [savedIncident, ...prev]);
 
-    toast.error('ANOMALY DETECTED', {
-      description: `${anomaly.zone} - Confidence: ${(anomaly.confidence * 100).toFixed(1)}%`,
-      duration: 5000
-    });
+          toast.error('ANOMALY DETECTED', {
+            description: `${anomaly.zone} - Confidence: ${(anomaly.confidence * 100).toFixed(1)}%`,
+            duration: 5000
+          });
+        }
+      })
+      .catch(err => {
+        console.error("Failed to save incident:", err);
+        // Fallback: Add locally anyway so operator sees it
+        setIncidents(prev => [{ ...incidentData, id: `temp-${Date.now()}` } as any, ...prev]);
+      });
 
     // Return to monitoring state after alert
     setTimeout(() => {
@@ -302,6 +333,8 @@ export default function App() {
               isMonitoring={isMonitoring}
               onAnomalyDetected={handleAnomalyDetected}
               showROI={showROI}
+              anomalyFrames={anomalyFrames}
+              fps={videoFPS}
             />
           </div>
         </div>

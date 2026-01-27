@@ -10,6 +10,8 @@ interface VideoMonitorProps {
     zone: string;
   }) => void;
   showROI: boolean;
+  anomalyFrames?: number[];
+  fps?: number;
 }
 
 
@@ -17,7 +19,9 @@ export function VideoMonitor({
   videoFile,
   isMonitoring,
   onAnomalyDetected,
-  showROI
+  showROI,
+  anomalyFrames = [],
+  fps = 30
 }: VideoMonitorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,16 +34,21 @@ export function VideoMonitor({
     if (!video) return;
 
     let url = "";
-    if (videoFile) {
+
+    // Priority: If monitoring, display the processed video from backend
+    if (isMonitoring && (window as any)._processedVideoUrl) {
+      url = (window as any)._processedVideoUrl;
+      video.src = url;
+      video.play().catch((err) => { console.error("Playback error:", err); });
+    }
+    // Otherwise, display the uploaded local file
+    else if (videoFile) {
       if (typeof videoFile === 'string') {
         url = videoFile;
       } else {
         url = URL.createObjectURL(videoFile);
       }
       video.src = url;
-      video.play().catch(() => { });
-    } else if ((window as any)._processedVideoUrl && isMonitoring) {
-      video.src = (window as any)._processedVideoUrl;
       video.play().catch(() => { });
     }
 
@@ -71,7 +80,8 @@ export function VideoMonitor({
       // Draw video frame
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const isProcessed = videoFile?.name.startsWith('analyzed_');
+      // Check if we are playing the processed video from the backend
+      const isProcessed = video.src.includes('/api/video/analyzed_');
 
       // Draw ROI (Restricted Zone) - Only if NOT processed (backend burns it in)
       if (showROI && !isProcessed) {
@@ -94,35 +104,39 @@ export function VideoMonitor({
         ctx.setLineDash([]);
       }
 
-      // Simulate anomaly detection every 5-15 seconds
       const now = Date.now();
-      if (!isProcessed && now - lastAnomalyCheck > Math.random() * 10000 + 5000) {
-        lastAnomalyCheck = now;
 
-        // Random anomaly detection (20% chance)
-        if (Math.random() < 0.2) {
-          const confidence = 0.75 + Math.random() * 0.24; // 75-99%
-          const zones = ['Restricted Zone', 'Perimeter', 'Entry Point'];
-          const zone = zones[Math.floor(Math.random() * zones.length)];
+      // 3. Handle Real Anomaly Detection from Backend Data
+      if (isProcessed && anomalyFrames.length > 0) {
+        const currentFrame = Math.floor(video.currentTime * fps);
+
+        // Check if current frame is in anomaly list
+        if (anomalyFrames.includes(currentFrame) && now - lastAnomalyCheck > 2000) {
+          lastAnomalyCheck = now;
 
           onAnomalyDetected({
             timestamp: new Date().toISOString(),
-            confidence,
-            zone
+            confidence: 0.85 + Math.random() * 0.1, // Approximate since we don't have per-frame score yet
+            zone: 'Restricted Zone'
           });
 
           setAlertActive(true);
-          setTimeout(() => setAlertActive(false), 3000);
-
-          // Draw alert indicator
-          ctx.strokeStyle = '#ef4444';
-          ctx.lineWidth = 4;
-          ctx.setLineDash([]);
-          const alertX = canvas.width * 0.5;
-          const alertY = canvas.height * 0.5;
-          const alertSize = 100;
-          ctx.strokeRect(alertX - alertSize / 2, alertY - alertSize / 2, alertSize, alertSize);
+          setTimeout(() => setAlertActive(false), 2000);
         }
+      }
+
+      // 4. Simulate anomaly detection every 5-15 seconds (ONLY if NOT processed)
+      if (!isProcessed && now - lastAnomalyCheck > Math.random() * 10000 + 5000) {
+        lastAnomalyCheck = now;
+        // ... (demo logic for non-monitored feeds)
+        const confidence = 0.75 + Math.random() * 0.24;
+        onAnomalyDetected({
+          timestamp: new Date().toISOString(),
+          confidence,
+          zone: 'Demo Area'
+        });
+        setAlertActive(true);
+        setTimeout(() => setAlertActive(false), 2000);
       }
 
       animationId = requestAnimationFrame(renderFrame);

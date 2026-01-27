@@ -136,7 +136,7 @@ def process_video_sync(file_path, output_path, output_filename):
             
             # 1. Apply Background Subtraction
             fgmask = fgbg.apply(roi_frame)
-            _, fgmask = cv2.threshold(fgmask, 200, 255, cv2.THRESH_BINARY)
+            _, fgmask = cv2.threshold(fgmask, 50, 255, cv2.THRESH_BINARY)
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
             fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
             
@@ -145,7 +145,7 @@ def process_video_sync(file_path, output_path, output_filename):
             
             rects = []
             for contour in contours:
-                if cv2.contourArea(contour) > 800:
+                if cv2.contourArea(contour) > 300: # Lowered from 800 for better sensitivity
                     bx, by, bw, bh = cv2.boundingRect(contour)
                     # Convert to startX, startY, endX, endY for tracker
                     rects.append((x + bx, y + by, x + bx + bw, y + by + bh))
@@ -209,6 +209,7 @@ def process_video_sync(file_path, output_path, output_filename):
             "anomaly_detected": anomaly_detected,
             "anomaly_frames": anomaly_frames,
             "total_frames": frame_idx,
+            "fps": fps,
             "video_url": f"/api/video/{output_filename}",
             "filename": output_filename
         }
