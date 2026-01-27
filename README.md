@@ -1,5 +1,7 @@
 # CCTV Maintenance & Monitoring System with Real-Time Anomaly Detection (MVP)
 
+![Dashboard Preview](assets/dashboard_preview.png)
+
 ## 1. Project Overview
 The **CCTV Maintenance & Monitoring System** is a professional-grade control-room simulation designed to enhance security oversight through AI-driven automation. Unlike standard video viewing applications, this system integrates **asset health tracking**, **maintenance scheduling awareness**, and **real-time anomaly detection**. 
 
@@ -82,7 +84,7 @@ To ensure versatility in evaluation, the system supports two distinct input mode
 - **Goal**: Design a professional, control-room style user interface.
 - **Implementation**: Built a React-based SPA with high-contrast, premium aesthetics (glassmorphism/dark mode).
 - **Outcome**: A functional dashboard that displays feed, telemetry, and incident logs simultaneously.
-- *See Screenshot – Phase 4*
+![Dashboard UI](assets/dashboard_preview.png)
 
 ### Phase 5: Real-Time Playback & Demo Integration
 - **Goal**: Combine the UI with the backend for end-to-end monitoring.
