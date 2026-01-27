@@ -83,7 +83,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             headers: {
                 ...form.getHeaders()
             },
-            timeout: 600000, // 10 minutes for large videos
+            timeout: 1800000, // 30 minutes for large videos or slow processing on Render
             maxContentLength: Infinity,
             maxBodyLength: Infinity
         });
@@ -97,7 +97,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
                     if (err) console.error('Cleanup Error:', err.message);
                 });
             }
-        }, 120000); // 2 minutes
+        }, 300000); // 5 minutes
 
         return res.json(response.data);
 
@@ -107,11 +107,17 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             errorMsg = error.response.data.detail || error.message;
         }
 
-        console.error('Backend Error:', errorMsg);
+        console.error('Backend Error details:', {
+            message: errorMsg,
+            code: error.code,
+            stack: error.stack
+        });
+
         if (!res.headersSent) {
             res.status(502).json({
                 error: 'Failed to process video via AI service',
-                details: errorMsg
+                details: errorMsg,
+                code: error.code
             });
         }
     }
