@@ -4,6 +4,7 @@ from torchvision import transforms
 import joblib
 import numpy as np
 import os
+import cv2
 
 # Configuration defaults
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

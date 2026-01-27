@@ -58,6 +58,7 @@ async def get_video(filename: str):
 
 @app.post("/analyze-video")
 async def analyze_video(file: UploadFile = File(...)):
+    print(f"DEBUG: analyze_video called with {file.filename}")
     if detector.vit_model is None:
         raise HTTPException(status_code=503, detail="Models not loaded")
 
@@ -71,6 +72,8 @@ async def analyze_video(file: UploadFile = File(...)):
         output_filename = output_filename.replace('.mp4', '.webm')
     output_path = os.path.join(OUTPUT_DIR, output_filename)
     
+    cap = None
+    out = None
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -88,17 +91,22 @@ async def analyze_video(file: UploadFile = File(...)):
         resized_dummy = resize_frame_smart(dummy_frame, target_width=TARGET_RESIZE_WIDTH)
         height, width = resized_dummy.shape[:2]
         
-        print(f"Processing at resolution: {width}x{height} (Original: {orig_width}x{orig_height})")
+        print(f"DEBUG: Processing at resolution: {width}x{height} (Original: {orig_width}x{orig_height})")
 
         # Create video writer
         out, actual_output_path = create_video_writer(output_path, fps, width, height)
         output_path = actual_output_path # Update to the actual path used (might be .webm)
 
-        # Calculate ROI: Full width, lower half of frame
+        # Calculate ROI: Full width, lower portion of frame
+        # User requested increased size, so we increase ratio from 0.5 to 0.75
+        ROI_HEIGHT_RATIO = 0.75 
         roi_x = 0
         roi_y = int(height * (1 - ROI_HEIGHT_RATIO))
         roi_w = width
         roi_h = int(height * ROI_HEIGHT_RATIO)
+
+        # MOG2 Background Subtractor for Motion Detection
+        fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=25, detectShadows=True)
 
         anomaly_detected = False
         anomaly_frames = []
@@ -107,17 +115,18 @@ async def analyze_video(file: UploadFile = File(...)):
         while True:
             ret, frame = cap.read()
             if not ret:
+                print(f"DEBUG: End of video at frame {frame_idx}")
                 break
-            
-            # Resize frame for speed
-            frame = resize_frame_smart(frame, target_width=TARGET_RESIZE_WIDTH)
             
             # Use the calculated ROI position
             x, y, w, h = roi_x, roi_y, roi_w, roi_h
             
+            # Resize frame for speed
+            frame = resize_frame_smart(frame, target_width=TARGET_RESIZE_WIDTH)
+            
             # Draw ROI border
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-            cv2.putText(frame, "RESTRICTED ZONE", (x, y - 10), 
+            cv2.putText(frame, "RESTRICTED ZONE (Motion-Active)", (x, y - 10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
             
             frame_has_anomaly = False
@@ -126,36 +135,62 @@ async def analyze_video(file: UploadFile = File(...)):
             if frame_idx % 100 == 0:
                 print(f"Processing frame {frame_idx}...")
             
-            # Process every Nth frame
-            if frame_idx % FRAME_SKIP == 0 and w >= PATCH_SIZE and h >= PATCH_SIZE:
-                roi_frame = frame[y:y+h, x:x+w]
-                
-                # Extract patches
-                patches = []
-                patch_coords = []
-                for i in range(0, h - PATCH_SIZE + 1, STRIDE):
-                    for j in range(0, w - PATCH_SIZE + 1, STRIDE):
-                        patch = roi_frame[i:i+PATCH_SIZE, j:j+PATCH_SIZE]
-                        patches.append(detector.preprocess_patch(patch))
-                        patch_coords.append((x + j, y + i))
-                
-                if patches:
-                    features = detector.extract_features(patches)
-                    scores = detector.score_anomalies(features)
+            # Process frames
+            roi_frame = frame[y:y+h, x:x+w]
+            
+            # 1. Apply Background Subtraction
+            fgmask = fgbg.apply(roi_frame)
+            _, fgmask = cv2.threshold(fgmask, 200, 255, cv2.THRESH_BINARY)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+            fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
+            
+            # 2. Find Contours (Moving Objects)
+            contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            candidates = []
+            candidate_boxes = []
+            
+            for contour in contours:
+                if cv2.contourArea(contour) > 800: # Min area threshold
+                    cx, cy, cw, ch = cv2.boundingRect(contour)
                     
-                    # Mark anomalies
-                    for score, (px, py) in zip(scores, patch_coords):
-                        if score < ANOMALY_THRESHOLD:
-                            frame_has_anomaly = True
-                            cv2.rectangle(frame, (px, py), (px + PATCH_SIZE, py + PATCH_SIZE), (0, 0, 255), 2)
-                            cv2.putText(frame, f"{score:.2f}", (px + 5, py + 15),
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                    # Expand box slightly
+                    pad = 10
+                    cx1, cy1 = max(0, cx - pad), max(0, cy - pad)
+                    cx2, cy2 = min(w, cx + cw + pad), min(h, cy + ch + pad)
                     
-                    if frame_has_anomaly:
-                        anomaly_detected = True
-                        anomaly_frames.append(frame_idx)
-                        cv2.putText(frame, "!!! ANOMALY DETECTED !!!", (20, 40),
-                                   cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 0, 255), 2)
+                    # Ensure patch is valid size (closest to PATCH_SIZE if possible, or just crop)
+                    # For ViT, we resize in preprocess, so any size crop works as long as it's not empty
+                    crop = roi_frame[cy1:cy2, cx1:cx2]
+                    
+                    if crop.size > 0:
+                        candidates.append(detector.preprocess_patch(crop))
+                        candidate_boxes.append((x + cx1, y + cy1, cx2 - cx1, cy2 - cy1))
+
+            # 3. Analyze Candidates
+            # Only run inference if we have candidates and we are on a check frame
+            # (or run every frame if 'candidates' exists, but let's stick to skip for speed if many objects)
+            if candidates and (frame_idx % (FRAME_SKIP // 2) == 0): # Check more often than blind grid (30 frames)
+                 print(f"DEBUG: Running inference on {len(candidates)} candidates at frame {frame_idx}")
+                 features = detector.extract_features(candidates)
+                 scores = detector.score_anomalies(features)
+                 
+                 for score, (bx, by, bw, bh) in zip(scores, candidate_boxes):
+                     # Visual feedback for detected objects
+                     if score < ANOMALY_THRESHOLD:
+                         frame_has_anomaly = True
+                         cv2.rectangle(frame, (bx, by), (bx + bw, by + bh), (0, 0, 255), 2)
+                         cv2.putText(frame, f"ANOMALY {score:.2f}", (bx, by - 5),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                     else:
+                         # Valid object detected but not anomalous enough
+                         cv2.rectangle(frame, (bx, by), (bx + bw, by + bh), (0, 255, 0), 1)
+            
+            if frame_has_anomaly:
+                anomaly_detected = True
+                anomaly_frames.append(frame_idx)
+                cv2.putText(frame, "!!! ANOMALY DETECTED !!!", (20, 40),
+                           cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 0, 255), 2)
 
             # Write frame
             out.write(frame)
@@ -166,14 +201,8 @@ async def analyze_video(file: UploadFile = File(...)):
                 import gc
                 gc.collect()
 
-        cap.release()
-        out.release()
-
         # Encode frames to base64 for reliable transport
-        # Note: In a production environment, we'd use a real stream.
-        # For this tool, we'll return a JSON array of frames.
-        
-        # Determine media type based on extension
+        # ... (rest of the logic remains) ...
         return {
             "status": "success",
             "anomaly_detected": anomaly_detected,
@@ -184,9 +213,23 @@ async def analyze_video(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+        import traceback
+        traceback.print_exc()
+        print(f"DEBUG: Exception in analyze_video: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    
+    finally:
+        if cap is not None:
+            cap.release()
+        if out is not None:
+            out.release()
+            
+        # Clean up temp file
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as cleanup_img:
+                print(f"DEBUG: Failed to cleanup temp dir: {cleanup_img}")
 
 if __name__ == "__main__":
     import uvicorn
