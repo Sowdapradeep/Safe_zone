@@ -124,17 +124,26 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
 
         console.error('Backend Error details:', {
             message: errorMsg,
-            code: error.code,
-            stack: error.stack
+            code: error.code
         });
 
         if (!res.headersSent) {
             res.status(502).json({
-                error: 'Failed to process video via AI service',
+                error: 'Failed to queue video analysis',
                 details: errorMsg,
                 code: error.code
             });
         }
+    }
+});
+
+// 1b. Polling Endpoint Proxy
+app.get('/api/check-status/:jobId', async (req, res) => {
+    try {
+        const response = await axios.get(`${PY_SERVICE_URL}/api/check-status/${req.params.jobId}`);
+        return res.json(response.data);
+    } catch (error) {
+        res.status(502).json({ error: 'Failed to check analysis status' });
     }
 });
 

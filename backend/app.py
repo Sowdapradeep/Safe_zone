@@ -3,7 +3,7 @@ import numpy as np
 import os
 import tempfile
 import shutil
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -35,6 +35,9 @@ detector = AnomalyDetector(model_dir=os.path.join(os.path.dirname(__file__), "mo
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "analyzed_videos")
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# In-memory job store
+jobs = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -69,7 +72,14 @@ async def get_video(filename: str):
         raise HTTPException(status_code=404, detail="Video not found")
     return FileResponse(file_path, media_type="video/webm" if filename.endswith('.webm') else "video/mp4")
 
-def process_video_sync(file_path, output_path, output_filename):
+@app.get("/api/check-status/{job_id}")
+async def check_status(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return jobs[job_id]
+
+def process_video_sync(job_id, file_path, output_path, output_filename):
+    jobs[job_id] = {"status": "processing", "progress": 0}
     cap = None
     out = None
     try:
@@ -131,6 +141,11 @@ def process_video_sync(file_path, output_path, output_filename):
             # Log progress more frequently for Render logs
             if frame_idx % 50 == 0:
                 print(f"Processing frame {frame_idx}...")
+                # Estimate progress (rough)
+                total_frames_estimate = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                if total_frames_estimate > 0:
+                    progress = int((frame_idx / total_frames_estimate) * 100)
+                    jobs[job_id]["progress"] = min(progress, 99)
             
             # Process frames
             roi_frame = frame[y:y+h, x:x+w]
@@ -225,12 +240,36 @@ def process_video_sync(file_path, output_path, output_filename):
             cap.release()
         if out is not None:
             out.release()
+        
+        # Final job status update
+        if "result" in locals():
+            jobs[job_id] = {**result, "status": "completed", "progress": 100}
+        else:
+            # Check if result failed above
+            pass
+
+def run_analysis_task(job_id, file_path, output_path, output_filename, temp_dir):
+    try:
+        result = process_video_sync(job_id, file_path, output_path, output_filename)
+        jobs[job_id] = {**result, "progress": 100, "status": "completed"}
+    except Exception as e:
+        jobs[job_id] = {"status": "error", "message": str(e)}
+    finally:
+        # Cleanup temp files when done
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
 
 @app.post("/analyze-video")
-async def analyze_video(file: UploadFile = File(...)):
+async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     print(f"DEBUG: analyze_video called with {file.filename}")
     if detector.vit_model is None:
         raise HTTPException(status_code=503, detail="Models not loaded")
+
+    job_id = f"job_{int(time.time())}"
+    jobs[job_id] = {"status": "starting", "progress": 0}
 
     # 1. Save uploaded file to temp
     temp_dir = tempfile.mkdtemp()
@@ -249,29 +288,17 @@ async def analyze_video(file: UploadFile = File(...)):
         # Proactive cleanup before heavy processing
         import gc
         gc.collect()
-        print(f"[PROD-LOG] Starting analysis for {file.filename}...")
-
-        # Run synchronous video processing in a separate thread
-        result = await asyncio.to_thread(process_video_sync, file_path, output_path, output_filename)
         
-        if result["status"] == "error":
-            raise HTTPException(status_code=500, detail=result["message"])
-            
-        return result
+        # Start background task
+        background_tasks.add_task(run_analysis_task, job_id, file_path, output_path, output_filename, temp_dir)
+        
+        return {"status": "queued", "job_id": job_id}
 
     except Exception as e:
-        print(f"DEBUG: Exception in analyze_video route: {e}")
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
-    
-    finally:
-        # Clean up temp file
+        # Cleanup on failure to start
         if os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception as cleanup_img:
-                print(f"DEBUG: Failed to cleanup temp dir: {cleanup_img}")
+            shutil.rmtree(temp_dir)
+        raise HTTPException(status_code=500, detail=f"Failed to queue job: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

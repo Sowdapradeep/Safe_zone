@@ -23,6 +23,7 @@ export default function App() {
   const [anomalyFrames, setAnomalyFrames] = useState<number[]>([]);
   const [videoFPS, setVideoFPS] = useState<number>(30);
   const [isLiveMode, setIsLiveMode] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -72,9 +73,8 @@ export default function App() {
       const formData = new FormData();
       formData.append('file', videoFile);
 
-      // Implementation of AbortController for long-running production requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes
+      const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 mins
 
       const response = await fetch(`${API_URL}/api/analyze-video`, {
         method: 'POST',
@@ -88,58 +88,78 @@ export default function App() {
         let errorMessage = `Server responded with ${response.status}`;
         try {
           const errorData = await response.json();
-          if (errorData.details) errorMessage = errorData.details;
-          else if (errorData.error) errorMessage = errorData.error;
-        } catch (e) {
-          // If not JSON, use default status message
-        }
+          errorMessage = errorData.details || errorData.error || errorMessage;
+        } catch (e) { }
         throw new Error(errorMessage);
       }
 
-      // Update UI with processed data
-      const data = await response.json();
-      console.log("Analysis results:", data);
+      const { job_id } = await response.json();
+      console.log(`Job queued: ${job_id}`);
 
-      // Instead of a blob, we point to the proxy endpoint on the Node server
+      // 2. Polling Loop
+      let completed = false;
+      let data = null;
+      setProcessingProgress(0);
+
+      while (!completed) {
+        // Wait 3 seconds between polls
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        const statusRes = await fetch(`${API_URL}/api/check-status/${job_id}`);
+        if (!statusRes.ok) continue;
+
+        const statusData = await statusRes.json();
+        setProcessingProgress(statusData.progress || 0);
+
+        toast.info('Analyzing Video...', {
+          description: `Progress: ${statusData.progress || 0}%`,
+          id: 'processing-toast'
+        });
+
+        if (statusData.status === 'completed') {
+          completed = true;
+          data = statusData;
+        } else if (statusData.status === 'error') {
+          throw new Error(statusData.message || 'Analysis backend error');
+        }
+      }
+
+      if (!data) throw new Error("No data received from completed job");
+
+      // Update UI with processed data
+      console.log("Analysis results:", data);
       const remoteUrl = `${API_URL}/api/video/${data.filename}`;
 
       setIsMonitoring(true);
       setSystemState('monitoring');
-
-      // We don't setVideoFile to a File object, we use the URL directly
       (window as any)._processedVideoUrl = remoteUrl;
 
-      // Parse headers for anomalies
-      const anomalyDetected = data.anomaly_detected;
-      if (anomalyDetected) {
+      if (data.anomaly_detected) {
         setAnomalyFrames(data.anomaly_frames || []);
         setVideoFPS(data.fps || 30);
-
         toast.error('Security Alert', {
-          description: `Anomalies detected in processed feed. Frames: ${data.anomaly_frames?.length || 0}`,
+          description: `Anomalies detected. Total frames: ${data.total_frames || 0}`,
           duration: 5000
         });
         setThreatLevel('high');
         setSystemState('alert');
       } else {
         setAnomalyFrames([]);
+        toast.success('Monitoring Active', {
+          description: 'No anomalies detected in the feed',
+          icon: <Activity className="w-4 h-4" />
+        });
       }
-
-      toast.dismiss('processing-toast');
-      toast.success('Monitoring Active', {
-        description: 'AI anomaly detection stream is live',
-        icon: <Activity className="w-4 h-4" />
-      });
 
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      toast.dismiss('processing-toast');
       toast.error('System Error', {
-        description: `Target: ${API_URL} | Error: ${error.message || 'Unknown network error'}. Ensure backend is running and CORS is allowed.`,
+        description: error.message || 'Analysis failed',
       });
       setIsMonitoring(false);
     } finally {
       setIsProcessing(false);
+      toast.dismiss('processing-toast');
     }
   }, [videoFile, isLiveMode]);
 
