@@ -7,9 +7,9 @@ backend/venv/
 .env.local
 .env.production
 
-# Large model files
-*.pth
-*.joblib
+# Large model files (Tracked via Git LFS)
+# *.pth
+# *.joblib
 node_modules
 
 # Uploads

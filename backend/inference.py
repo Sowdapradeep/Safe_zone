@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 import os
 import cv2
+import gc
 
 # Configuration defaults
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -43,15 +44,16 @@ class AnomalyDetector:
         self.vit_model.load_state_dict(state_dict, strict=False)
         self.vit_model.heads = torch.nn.Identity()
         self.vit_model.to(self.device)
-        if self.device.type == 'cpu':
-            pass # half() on CPU is often slower, so we stick to float32
-            # self.vit_model.half()
-            # self.is_half = True
         self.vit_model.eval()
-        del state_dict # Cleanup memory immediately
+        
+        # Cleanup memory immediately after first model
+        del state_dict 
+        gc.collect()
+        if self.device.type == 'cuda': torch.cuda.empty_cache()
 
         # 2. Anomaly Detector
         self.anomaly_model = joblib.load(anomaly_path)
+        gc.collect() # Final cleanup
         print("Models loaded successfully.")
 
     def extract_features(self, patches):

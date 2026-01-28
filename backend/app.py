@@ -41,8 +41,9 @@ async def lifespan(app: FastAPI):
     # Load models at startup
     try:
         detector.load_models()
+        print("✅ Models ready and active.")
     except Exception as e:
-        print(f"Error loading models: {e}")
+        print(f"❌ Error loading models: {e}")
     yield
     # Cleanup if needed
 
