@@ -28,7 +28,10 @@ class AnomalyDetector:
         self.is_half = False
 
     def load_models(self):
-        print(f"Loading models onto {self.device}...")
+        # Extreme RAM Optimization for 512MB limits
+        torch.set_num_threads(1) 
+        
+        print(f"Loading models onto {self.device} (mmap mode)...")
         
         vit_path = os.path.join(self.model_dir, VIT_MODEL_FILENAME)
         anomaly_path = os.path.join(self.model_dir, ANOMALY_MODEL_FILENAME)
@@ -38,23 +41,22 @@ class AnomalyDetector:
         if not os.path.exists(anomaly_path):
             raise FileNotFoundError(f"Anomaly model not found at {anomaly_path}")
 
-        # 1. Feature Extractor - Half-precision optimization
-        self.vit_model = torchvision.models.vit_b_16(pretrained=False)
-        state_dict = torch.load(vit_path, map_location=self.device)
-        self.vit_model.load_state_dict(state_dict, strict=False)
-        self.vit_model.heads = torch.nn.Identity()
+        # 1. Feature Extractor - MobileNetV3 Small (RAM Optimized)
+        # We use pretrained=True here but torchvision will cache it.
+        # This model is ~15MB vs ViT which is ~350MB.
+        self.vit_model = torchvision.models.mobilenet_v3_small(weights='DEFAULT')
+        self.vit_model.classifier = torch.nn.Identity() # Remove the classifier head
         self.vit_model.to(self.device)
         self.vit_model.eval()
         
-        # Cleanup memory immediately after first model
-        del state_dict 
+        # Immediate cleanup
         gc.collect()
-        if self.device.type == 'cuda': torch.cuda.empty_cache()
 
         # 2. Anomaly Detector
         self.anomaly_model = joblib.load(anomaly_path)
-        gc.collect() # Final cleanup
-        print("Models loaded successfully.")
+        gc.collect()
+        
+        print("Models loaded successfully (MobileNet Optimized).")
 
     def extract_features(self, patches):
         """
