@@ -22,6 +22,7 @@ export default function App() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [anomalyFrames, setAnomalyFrames] = useState<number[]>([]);
   const [videoFPS, setVideoFPS] = useState<number>(30);
+  const [isLiveMode, setIsLiveMode] = useState(false);
   useEffect(() => {
     const fetchIncidents = async () => {
       try {
@@ -48,6 +49,15 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleStartMonitoring = useCallback(async () => {
+    if (isLiveMode) {
+      setIsMonitoring(true);
+      setSystemState('monitoring');
+      toast.success('Live Monitoring Active', {
+        description: 'Streaming directly from camera source',
+        icon: <Activity className="w-4 h-4" />
+      });
+      return;
+    }
 
     if (!videoFile) return;
 
@@ -62,10 +72,17 @@ export default function App() {
       const formData = new FormData();
       formData.append('file', videoFile);
 
+      // Implementation of AbortController for long-running production requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30 minutes
+
       const response = await fetch(`${API_URL}/api/analyze-video`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         let errorMessage = `Server responded with ${response.status}`;
@@ -124,7 +141,7 @@ export default function App() {
     } finally {
       setIsProcessing(false);
     }
-  }, [videoFile]);
+  }, [videoFile, isLiveMode]);
 
   const handleStopMonitoring = useCallback(() => {
     setIsMonitoring(false);
@@ -195,21 +212,39 @@ export default function App() {
     }, 3000);
   }, []);
 
-  // WebSocket for Live Alerts (Real-time events from backend)
+  // WebSocket for Real-time alerts during live monitoring
   useEffect(() => {
-    if (!isMonitoring) return;
+    let socket: WebSocket | null = null;
 
-    // Note: Node.js backend might require socket.io client lib, but for raw ws if configured:
-    const wsUrl = API_URL.replace('http', 'ws'); // Convert http:// to ws:// or https:// to wss://
-    const socket = new WebSocket(wsUrl);
+    if (isMonitoring && isLiveMode) {
+      // Connect to the Python backend WebSocket directly for live alerts
+      const wsUrl = `ws://localhost:8000/ws/alerts`;
+      console.log(`Connecting to Live Alerts WebSocket: ${wsUrl}`);
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleAnomalyDetected(data);
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => console.log("Live Alerts Connected");
+
+      socket.onmessage = (event) => {
+        try {
+          const alertData = JSON.parse(event.data);
+          handleAnomalyDetected({
+            timestamp: alertData.timestamp || new Date().toLocaleTimeString(),
+            confidence: alertData.confidence || 0.85,
+            zone: alertData.zone || 'Restricted Zone'
+          });
+        } catch (e) {
+          console.error("Failed to parse socket message:", e);
+        }
+      };
+
+      socket.onclose = () => console.log("Live Alerts Disconnected");
+    }
+
+    return () => {
+      if (socket) socket.close();
     };
-
-    return () => socket.close();
-  }, [isMonitoring, handleAnomalyDetected]);
+  }, [isMonitoring, isLiveMode, handleAnomalyDetected]);
 
 
   const handleScanIncidents = useCallback(() => {
@@ -241,11 +276,9 @@ export default function App() {
   }, []);
 
   const handleResolveIncident = useCallback((id: string) => {
-    setIncidents(prev =>
-      prev.map(incident =>
-        incident.id === id ? { ...incident, status: 'closed' as const } : incident
-      )
-    );
+    setIncidents(prev => prev.map(inc =>
+      inc.id === id ? { ...inc, status: 'closed' } : inc
+    ));
     toast.success('Incident resolved', {
       description: 'Incident has been closed'
     });
@@ -329,30 +362,28 @@ export default function App() {
 
           <div className="flex-1 bg-zinc-900 border border-yellow-900/30 rounded-lg overflow-hidden">
             <VideoMonitor
-              videoFile={videoFile}
               isMonitoring={isMonitoring}
-              onAnomalyDetected={handleAnomalyDetected}
+              videoFile={videoFile}
               showROI={showROI}
-              anomalyFrames={anomalyFrames}
-              fps={videoFPS}
+              onAnomalyDetected={handleAnomalyDetected}
+              isLiveMode={isLiveMode}
             />
           </div>
         </div>
-
-        {/* Right Panel - Operations & Incidents */}
-        <div className="col-span-3 space-y-5 overflow-y-auto">
+        <div className="col-span-3 space-y-6 overflow-y-auto">
           <OperationsPanel
-            onVideoUpload={handleVideoUpload}
+            isMonitoring={isMonitoring}
             onStartMonitoring={handleStartMonitoring}
             onStopMonitoring={handleStopMonitoring}
-            onScanIncidents={handleScanIncidents}
-            isMonitoring={isMonitoring}
-            hasVideo={videoFile !== null}
+            onVideoUpload={handleVideoUpload}
+            onToggleROI={() => setShowROI(!showROI)}
             showROI={showROI}
-            onToggleROI={setShowROI}
             isProcessing={isProcessing}
+            isLiveMode={isLiveMode}
+            onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
+            onScanIncidents={handleScanIncidents}
+            hasVideo={videoFile !== null}
           />
-
 
           <div className="h-[calc(100vh-650px)] min-h-[400px]">
             <IncidentLog

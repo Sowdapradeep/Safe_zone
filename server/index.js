@@ -62,7 +62,11 @@ const PY_SERVICE_URL = process.env.PY_SERVICE_URL || 'http://127.0.0.1:8000';
 
 // 1. Upload Video for Analysis
 app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
+    const startTime = Date.now();
+    console.log(`[PROD-LOG] Received upload request at ${new Date().toISOString()}`);
+
     if (!req.file) {
+        console.error('[PROD-LOG] No file received in request');
         return res.status(400).send('No file uploaded');
     }
 
@@ -88,7 +92,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             maxBodyLength: Infinity
         });
 
-        console.log(`Analysis complete for ${fileName}`);
+        console.log(`[PROD-LOG] Analysis complete for ${fileName} in ${Date.now() - startTime}ms`);
 
         // Clean up temp file after a delay
         setTimeout(() => {
@@ -207,3 +211,8 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`MongoDB URI: ${MONGO_URI ? 'Configured' : 'Not configured'}`);
     console.log(`Python Service URL: ${PY_SERVICE_URL}`);
 });
+
+// Production Timeout Fixes
+server.timeout = 1800000; // 30 minutes
+server.keepAliveTimeout = 65000; // Slightly higher than common ELB timeouts
+server.headersTimeout = 66000;

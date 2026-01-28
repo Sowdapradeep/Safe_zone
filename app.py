@@ -108,6 +108,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Anomaly-Detected"]
 )
 
 # --- Preprocessing ---
@@ -311,12 +312,15 @@ async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = Fi
         )
 
     except Exception as e:
-        if cap: cap.release()
-        if out: out.release()
-        print(f"Analysis Error: {e}")
-        # Use cleanup with retry even in error cases
-        cleanup_temp(temp_dir)
+        print(f"[PROD-LOG] Analysis Error: {e}")
+        # schedule cleanup
+        background_tasks.add_task(cleanup_temp, temp_dir)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    finally:
+        if 'cap' in locals() and cap: cap.release()
+        if 'out' in locals() and out: out.release()
+        cv2.destroyAllWindows()
+        print(f"[PROD-LOG] Resources released for {file.filename}")
 
 async def gen_live_frames():
     cap = cv2.VideoCapture(0)
