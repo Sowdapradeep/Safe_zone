@@ -83,14 +83,25 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
 
         console.log(`Forwarding ${fileName} to Python AI Service at ${PY_SERVICE_URL}...`);
 
-        const response = await axios.post(`${PY_SERVICE_URL}/analyze-video`, form, {
-            headers: {
-                ...form.getHeaders()
-            },
-            timeout: 1800000, // 30 minutes for large videos or slow processing on Render
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        });
+        // Simple retry logic for production stability
+        let response;
+        let retries = 2;
+        while (retries > 0) {
+            try {
+                response = await axios.post(`${PY_SERVICE_URL}/analyze-video`, form, {
+                    headers: { ...form.getHeaders() },
+                    timeout: 1800000,
+                    maxContentLength: Infinity,
+                    maxBodyLength: Infinity
+                });
+                break;
+            } catch (err) {
+                retries--;
+                if (retries === 0) throw err;
+                console.log(`[PROD-LOG] Backend busy or restarting, retrying... (${retries} left)`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
 
         console.log(`[PROD-LOG] Analysis complete for ${fileName} in ${Date.now() - startTime}ms`);
 

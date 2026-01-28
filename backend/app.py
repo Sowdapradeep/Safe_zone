@@ -25,8 +25,8 @@ ROI_HEIGHT_RATIO = 0.5  # Use bottom 50% of frame height
 ANOMALY_THRESHOLD = -0.05
 PATCH_SIZE = 224
 STRIDE = 224  # No overlap for faster processing
-FRAME_SKIP = 60  # Process every 60th frame (approx every 2 seconds at 30fps)
-TARGET_RESIZE_WIDTH = 800 # Increased to ensure ROI > 224px height
+FRAME_SKIP = 90  # Increased for production stability (approx every 3 seconds)
+TARGET_RESIZE_WIDTH = 640 # Slightly reduced for lower memory footprint
 
 # Global detector instance
 detector = AnomalyDetector(model_dir=os.path.join(os.path.dirname(__file__), "model"))
@@ -246,6 +246,11 @@ async def analyze_video(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
+        # Proactive cleanup before heavy processing
+        import gc
+        gc.collect()
+        print(f"[PROD-LOG] Starting analysis for {file.filename}...")
+
         # Run synchronous video processing in a separate thread
         result = await asyncio.to_thread(process_video_sync, file_path, output_path, output_filename)
         
