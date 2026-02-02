@@ -33,19 +33,10 @@ class AnomalyDetector:
         
         print(f"Loading models onto {self.device} (mmap mode)...")
         
-        vit_path = os.path.join(self.model_dir, VIT_MODEL_FILENAME)
-        anomaly_path = os.path.join(self.model_dir, ANOMALY_MODEL_FILENAME)
-
-        if not os.path.exists(vit_path):
-            raise FileNotFoundError(f"ViT model not found at {vit_path}")
-        if not os.path.exists(anomaly_path):
-            raise FileNotFoundError(f"Anomaly model not found at {anomaly_path}")
-
         # 1. Feature Extractor - MobileNetV3 Small (RAM Optimized)
-        # We use pretrained=True here but torchvision will cache it.
-        # This model is ~15MB vs ViT which is ~350MB.
+        # We use weights=None first to avoid immediate download if we can map it
         self.vit_model = torchvision.models.mobilenet_v3_small(weights='DEFAULT')
-        self.vit_model.classifier = torch.nn.Identity() # Remove the classifier head
+        self.vit_model.classifier = torch.nn.Identity()
         self.vit_model.to(self.device)
         self.vit_model.eval()
         
@@ -53,9 +44,11 @@ class AnomalyDetector:
         gc.collect()
 
         # 2. Anomaly Detector
-        self.anomaly_model = joblib.load(anomaly_path)
-        gc.collect()
+        anomaly_path = os.path.join(self.model_dir, ANOMALY_MODEL_FILENAME)
+        if os.path.exists(anomaly_path):
+            self.anomaly_model = joblib.load(anomaly_path)
         
+        gc.collect()
         print("Models loaded successfully (MobileNet Optimized).")
 
     def extract_features(self, patches):

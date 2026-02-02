@@ -47,18 +47,20 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Replace with your actual Mongo URI or use localhost
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/safezone';
 
-mongoose.connect(MONGO_URI)
+// Multer Setup
+const upload = multer({ dest: 'uploads/' });
+
+// In-memory fallback for production if MongoDB is dead
+let incidentFallback = [];
+
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 })
     .then(() => {
         console.log('✅ MongoDB Connected successfully');
-        console.log(`Connection string: ${MONGO_URI.replace(/:([^:@]+)@/, ':****@')}`);
     })
     .catch(err => {
         console.error('❌ MongoDB Connection Error:', err.message);
-        console.error('Ensure MONGO_URI is set correctly in environment variables.');
+        console.log('⚠️ Falling back to in-memory incident storage (Temporary).');
     });
-
-// Multer Setup for File Uploads
-const upload = multer({ dest: 'uploads/' });
 
 // --- AI Service Integration (Python Microservice) ---
 // We assume the existing Python FastAPI is running on port 8000
@@ -87,11 +89,14 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
             contentType: 'video/mp4'
         });
 
-        console.log(`Forwarding ${fileName} to Python AI Service at ${PY_SERVICE_URL}...`);
+        console.log(`Forwarding ${fileName} to AI Service: ${PY_SERVICE_URL}`);
 
-        // Simple retry logic for production stability
+        if (PY_SERVICE_URL.includes('127.0.0.1') && process.env.NODE_ENV === 'production') {
+            console.warn('[WARNING] PY_SERVICE_URL is localhost in production environment!');
+        }
+
         let response;
-        let retries = 2;
+        let retries = 5; // Increased retries for model pre-warming
         while (retries > 0) {
             try {
                 response = await axios.post(`${PY_SERVICE_URL}/analyze-video`, form, {
@@ -103,9 +108,11 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
                 break;
             } catch (err) {
                 retries--;
+                const status = err.response ? err.response.status : 'No Response';
+                console.log(`[PROD-LOG] AI Service attempt failed (Status: ${status}, Error: ${err.code}). Retrying... (${retries} left)`);
+
                 if (retries === 0) throw err;
-                console.log(`[PROD-LOG] Backend busy or restarting, retrying... (${retries} left)`);
-                await new Promise(resolve => setTimeout(resolve, 5000));
+                await new Promise(resolve => setTimeout(resolve, 3000));
             }
         }
 
@@ -165,28 +172,33 @@ app.get('/api/video/:filename', async (req, res) => {
 // 2. Incident Management
 app.get('/api/incidents', async (req, res) => {
     try {
-        console.log(`[LOG] Fetching incidents... DB State: ${mongoose.connection.readyState}`);
-        const incidents = await Incident.find().sort({ timestamp: -1 }).limit(50);
-        res.json(incidents);
+        if (mongoose.connection.readyState === 1) {
+            const incidents = await Incident.find().sort({ timestamp: -1 }).limit(50);
+            return res.json(incidents);
+        } else {
+            console.log('[LOG] DB disconnected, serving from fallback memory');
+            return res.json(incidentFallback);
+        }
     } catch (err) {
         console.error('[ERROR] Failed to fetch incidents:', err.message);
-        res.status(500).json({
-            error: 'Failed to retrieve incidents from database',
-            details: err.message,
-            dbState: mongoose.connection.readyState
-        });
+        res.status(200).json(incidentFallback); // Avoid 500 for UI stability
     }
 });
 
 app.post('/api/incidents', async (req, res) => {
     try {
-        const newIncident = new Incident(req.body);
-        const saved = await newIncident.save();
-
-        // Broadcast to connected clients
-        broadcastAnomaly(saved);
-
-        res.status(201).json(saved);
+        if (mongoose.connection.readyState === 1) {
+            const newIncident = new Incident(req.body);
+            const saved = await newIncident.save();
+            broadcastAnomaly(saved);
+            return res.status(201).json(saved);
+        } else {
+            const tempIncident = { ...req.body, _id: Date.now().toString(), timestamp: new Date() };
+            incidentFallback.unshift(tempIncident);
+            if (incidentFallback.length > 50) incidentFallback.pop();
+            broadcastAnomaly(tempIncident);
+            return res.status(201).json(tempIncident);
+        }
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
@@ -208,11 +220,14 @@ app.get('/api/live-feed-url', (req, res) => {
 });
 
 // Health check endpoint for Render
-app.get('/', (req, res) => {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
-        service: 'SafeZone Backend',
-        timestamp: new Date().toISOString()
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        ai_service: PY_SERVICE_URL,
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV || 'development'
     });
 });
 

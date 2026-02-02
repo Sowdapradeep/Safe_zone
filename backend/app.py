@@ -61,7 +61,12 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Surveillance Anomaly Detection API is running"}
+    return {
+        "message": "Surveillance Anomaly Detection API is running",
+        "models_loaded": detector.vit_model is not None,
+        "device": str(detector.device),
+        "timestamp": time.time()
+    }
 
 @app.get("/api/video/{filename}")
 async def get_video(filename: str):
