@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 // Get API URL from environment variable, fallback to localhost for development
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/alerts';
 
 export default function App() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -237,8 +238,8 @@ export default function App() {
     let socket: WebSocket | null = null;
 
     if (isMonitoring && isLiveMode) {
-      // Connect to the Python backend WebSocket directly for live alerts
-      const wsUrl = `ws://localhost:8000/ws/alerts`;
+      // Connect to the Live Alerts WebSocket
+      const wsUrl = WS_URL;
       console.log(`Connecting to Live Alerts WebSocket: ${wsUrl}`);
 
       socket = new WebSocket(wsUrl);

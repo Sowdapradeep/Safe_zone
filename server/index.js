@@ -48,8 +48,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/safezone';
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+    .then(() => {
+        console.log('✅ MongoDB Connected successfully');
+        console.log(`Connection string: ${MONGO_URI.replace(/:([^:@]+)@/, ':****@')}`);
+    })
+    .catch(err => {
+        console.error('❌ MongoDB Connection Error:', err.message);
+        console.error('Ensure MONGO_URI is set correctly in environment variables.');
+    });
 
 // Multer Setup for File Uploads
 const upload = multer({ dest: 'uploads/' });
@@ -105,15 +111,7 @@ app.post('/api/analyze-video', upload.single('file'), async (req, res) => {
 
         console.log(`[PROD-LOG] Analysis complete for ${fileName} in ${Date.now() - startTime}ms`);
 
-        // Clean up temp file after a delay
-        setTimeout(() => {
-            if (fs.existsSync(filePath)) {
-                fs.unlink(filePath, (err) => {
-                    if (err) console.error('Cleanup Error:', err.message);
-                });
-            }
-        }, 300000); // 5 minutes
-
+        // Update: The response now contains a job_id for async processing
         return res.json(response.data);
 
     } catch (error) {
@@ -143,6 +141,7 @@ app.get('/api/check-status/:jobId', async (req, res) => {
         const response = await axios.get(`${PY_SERVICE_URL}/api/check-status/${req.params.jobId}`);
         return res.json(response.data);
     } catch (error) {
+        console.error('Status Check Error:', error.message);
         res.status(502).json({ error: 'Failed to check analysis status' });
     }
 });
@@ -166,10 +165,16 @@ app.get('/api/video/:filename', async (req, res) => {
 // 2. Incident Management
 app.get('/api/incidents', async (req, res) => {
     try {
+        console.log(`[LOG] Fetching incidents... DB State: ${mongoose.connection.readyState}`);
         const incidents = await Incident.find().sort({ timestamp: -1 }).limit(50);
         res.json(incidents);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[ERROR] Failed to fetch incidents:', err.message);
+        res.status(500).json({
+            error: 'Failed to retrieve incidents from database',
+            details: err.message,
+            dbState: mongoose.connection.readyState
+        });
     }
 });
 

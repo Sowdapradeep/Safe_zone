@@ -189,7 +189,7 @@ export function VideoMonitor({
       {isLiveMode && isMonitoring ? (
         <div className="relative w-full h-full">
           <img
-            src="http://localhost:8000/live-feed"
+            src={import.meta.env.VITE_LIVE_FEED_URL || "http://localhost:8000/live-feed"}
             className="w-full h-full object-contain"
             alt="Live Surveillance Feed"
           />
