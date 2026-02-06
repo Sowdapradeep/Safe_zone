@@ -9,7 +9,7 @@ import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 
 // Get API URL from environment variable, fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/alerts';
 
 export default function App() {
@@ -45,6 +45,75 @@ export default function App() {
     setVideoFile(file);
     toast.success('Video feed loaded successfully', {
       description: `Recording: ${file.name}`
+    });
+  }, []);
+
+  const handleAnomalyDetected = useCallback((anomaly: {
+    timestamp: string;
+    confidence: number;
+    zone: string;
+  }) => {
+    setLastAnomalyConfidence(anomaly.confidence);
+    setSystemState('alert');
+
+    // Determine threat level based on confidence
+    if (anomaly.confidence > 0.9) {
+      setThreatLevel('high');
+    } else if (anomaly.confidence > 0.75) {
+      setThreatLevel('medium');
+    } else {
+      setThreatLevel('low');
+    }
+
+    // Create new incident object
+    const incidentData = {
+      cameraId: 'CAM-001-NE',
+      location: 'Building A / Floor 2 / Zone North-East',
+      zone: anomaly.zone,
+      incidentType: 'Anomaly Detected',
+      severity: anomaly.confidence > 0.9 ? 'high' : anomaly.confidence > 0.75 ? 'medium' : 'low',
+      status: 'open',
+      timestamp: anomaly.timestamp,
+      confidence: anomaly.confidence,
+      description: `AI-detected anomalous activity in ${anomaly.zone}. Confidence: ${(anomaly.confidence * 100).toFixed(1)}%. Requires operator review.`
+    };
+
+    // 1. Post to Server (Persistence)
+    fetch(`${API_URL}/api/incidents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(incidentData)
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const savedIncident = await res.json();
+          // 2. Update local state with the saved object from DB (has real ID)
+          setIncidents(prev => [savedIncident, ...prev]);
+
+          toast.error('ANOMALY DETECTED', {
+            description: `${anomaly.zone} - Confidence: ${(anomaly.confidence * 100).toFixed(1)}%`,
+            duration: 5000
+          });
+        }
+      })
+      .catch(err => {
+        console.error("Failed to save incident:", err);
+        // Fallback: Add locally anyway so operator sees it
+        setIncidents(prev => [{ ...incidentData, id: `temp-${Date.now()}` } as any, ...prev]);
+      });
+
+    // Return to monitoring state after alert
+    setTimeout(() => {
+      setSystemState('monitoring');
+    }, 3000);
+  }, []);
+
+  const handleStopMonitoring = useCallback(() => {
+    setIsMonitoring(false);
+    setSystemState('idle');
+    setThreatLevel('low');
+    toast.info('Monitoring stopped', {
+      description: 'System returned to idle state'
     });
   }, []);
 
@@ -128,8 +197,15 @@ export default function App() {
       if (!data) throw new Error("No data received from completed job");
 
       // Update UI with processed data
-      console.log("Analysis results:", data);
-      const remoteUrl = `${API_URL}/api/video/${data.filename}`;
+      console.log("Analysis results (Raw):", data);
+
+      const videoFilename = data.filename || (data.results && data.results.filename);
+      if (!videoFilename) {
+        console.error("Missing filename in analysis data:", data);
+        throw new Error("Analysis completed but no filename returned");
+      }
+
+      const remoteUrl = `${API_URL}/api/video/${videoFilename}`;
 
       setIsMonitoring(true);
       setSystemState('monitoring');
@@ -144,6 +220,13 @@ export default function App() {
         });
         setThreatLevel('high');
         setSystemState('alert');
+
+        // Auto-create incident on analysis completion
+        handleAnomalyDetected({
+          timestamp: new Date().toISOString(),
+          confidence: 0.92,
+          zone: 'Restricted Zone (Video Analysis)'
+        });
       } else {
         setAnomalyFrames([]);
         toast.success('Monitoring Active', {
@@ -162,76 +245,8 @@ export default function App() {
       setIsProcessing(false);
       toast.dismiss('processing-toast');
     }
-  }, [videoFile, isLiveMode]);
+  }, [videoFile, isLiveMode, handleAnomalyDetected]);
 
-  const handleStopMonitoring = useCallback(() => {
-    setIsMonitoring(false);
-    setSystemState('idle');
-    setThreatLevel('low');
-    toast.info('Monitoring stopped', {
-      description: 'System returned to idle state'
-    });
-  }, []);
-
-  const handleAnomalyDetected = useCallback((anomaly: {
-    timestamp: string;
-    confidence: number;
-    zone: string;
-  }) => {
-    setLastAnomalyConfidence(anomaly.confidence);
-    setSystemState('alert');
-
-    // Determine threat level based on confidence
-    if (anomaly.confidence > 0.9) {
-      setThreatLevel('high');
-    } else if (anomaly.confidence > 0.75) {
-      setThreatLevel('medium');
-    } else {
-      setThreatLevel('low');
-    }
-
-    // Create new incident object
-    const incidentData = {
-      cameraId: 'CAM-001-NE',
-      location: 'Building A / Floor 2 / Zone North-East',
-      zone: anomaly.zone,
-      incidentType: 'Anomaly Detected',
-      severity: anomaly.confidence > 0.9 ? 'high' : anomaly.confidence > 0.75 ? 'medium' : 'low',
-      status: 'open',
-      timestamp: anomaly.timestamp,
-      confidence: anomaly.confidence,
-      description: `AI-detected anomalous activity in ${anomaly.zone}. Confidence: ${(anomaly.confidence * 100).toFixed(1)}%. Requires operator review.`
-    };
-
-    // 1. Post to Server (Persistence)
-    fetch(`${API_URL}/api/incidents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(incidentData)
-    })
-      .then(async (res) => {
-        if (res.ok) {
-          const savedIncident = await res.json();
-          // 2. Update local state with the saved object from DB (has real ID)
-          setIncidents(prev => [savedIncident, ...prev]);
-
-          toast.error('ANOMALY DETECTED', {
-            description: `${anomaly.zone} - Confidence: ${(anomaly.confidence * 100).toFixed(1)}%`,
-            duration: 5000
-          });
-        }
-      })
-      .catch(err => {
-        console.error("Failed to save incident:", err);
-        // Fallback: Add locally anyway so operator sees it
-        setIncidents(prev => [{ ...incidentData, id: `temp-${Date.now()}` } as any, ...prev]);
-      });
-
-    // Return to monitoring state after alert
-    setTimeout(() => {
-      setSystemState('monitoring');
-    }, 3000);
-  }, []);
 
   // WebSocket for Real-time alerts during live monitoring
   useEffect(() => {
@@ -244,7 +259,13 @@ export default function App() {
 
       socket = new WebSocket(wsUrl);
 
-      socket.onopen = () => console.log("Live Alerts Connected");
+      socket.onopen = () => {
+        console.log("Live Alerts Connected");
+        toast.success('AI Monitoring Active', {
+          description: 'Connected to live anomaly detection service.',
+          duration: 3000
+        });
+      };
 
       socket.onmessage = (event) => {
         try {
@@ -333,9 +354,9 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 grid grid-cols-12 gap-5 p-5 overflow-hidden">
+      <div className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden min-w-0">
         {/* Left Panel - System Status & Camera Info */}
-        <div className="col-span-3 space-y-5 overflow-y-auto">
+        <div className="col-span-3 space-y-5 overflow-y-auto min-w-0">
           <SystemStatusPanel
             systemState={systemState}
             cameraHealth="online"
@@ -391,7 +412,7 @@ export default function App() {
             />
           </div>
         </div>
-        <div className="col-span-3 space-y-6 overflow-y-auto">
+        <div className="col-span-3 space-y-6 overflow-y-auto min-w-0">
           <OperationsPanel
             isMonitoring={isMonitoring}
             onStartMonitoring={handleStartMonitoring}

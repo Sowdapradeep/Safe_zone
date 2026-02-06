@@ -50,85 +50,85 @@ export function CameraAssetInfo({
   };
 
   return (
-    <div className="bg-zinc-950 border border-yellow-900/30 rounded-lg p-5">
+    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-5 backdrop-blur-md shadow-xl">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-base font-bold text-yellow-400 uppercase tracking-wider">
+        <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
           Camera Asset
         </h3>
-        <Badge className={`${getStatusColor()} border flex items-center gap-2 px-3 py-1.5 text-sm`}>
-          <span className={`w-2.5 h-2.5 rounded-full ${getStatusDot()} animate-pulse`}></span>
+        <Badge className={`${getStatusColor()} border-0 flex items-center gap-2 px-2.5 py-1 text-xs font-bold tracking-wide`}>
+          <span className={`w-2 h-2 rounded-full ${getStatusDot()} animate-pulse shadow-lg`}></span>
           {status.toUpperCase()}
         </Badge>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Camera ID */}
-        <div className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Camera className="w-5 h-5 text-yellow-400" />
-            <span className="text-sm font-medium text-yellow-600">Camera ID</span>
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 group hover:border-zinc-700/50 transition-colors">
+          <div className="flex items-center gap-2 mb-2">
+            <Camera className="w-4 h-4 text-zinc-500 group-hover:text-yellow-500 transition-colors" />
+            <span className="text-xs font-medium text-zinc-500">Camera ID</span>
           </div>
-          <div className="text-xl font-bold text-white font-mono">{cameraId}</div>
+          <div className="text-lg font-bold text-white font-mono tracking-tight">{cameraId}</div>
         </div>
 
         {/* Location Hierarchy */}
-        <div className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 group hover:border-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2 mb-3">
-            <MapPin className="w-5 h-5 text-lime-400" />
-            <span className="text-sm font-medium text-yellow-600">Location</span>
+            <MapPin className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
+            <span className="text-xs font-medium text-zinc-500">Location</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Building:</span>
-              <span className="text-white font-semibold">{building}</span>
+              <span className="text-zinc-600 text-xs">Building</span>
+              <span className="text-zinc-300 font-medium text-xs">{building}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Floor:</span>
-              <span className="text-white font-semibold">{floor}</span>
+              <span className="text-zinc-600 text-xs">Floor</span>
+              <span className="text-zinc-300 font-medium text-xs">{floor}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Zone:</span>
-              <span className="text-white font-semibold">{zone}</span>
+              <span className="text-zinc-600 text-xs">Zone</span>
+              <span className="text-zinc-300 font-medium text-xs">{zone}</span>
             </div>
           </div>
         </div>
 
         {/* Maintenance Schedule */}
-        <div className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 group hover:border-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2 mb-3">
-            <Wrench className="w-5 h-5 text-amber-400" />
-            <span className="text-sm font-medium text-yellow-600">Maintenance</span>
+            <Wrench className="w-4 h-4 text-zinc-500 group-hover:text-amber-500 transition-colors" />
+            <span className="text-xs font-medium text-zinc-500">Maintenance</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Last Service:</span>
-              <span className="text-white font-medium">{formatDate(lastMaintenance)}</span>
+              <span className="text-zinc-600 text-xs">Last Service</span>
+              <span className="text-zinc-300 font-medium text-xs font-mono">{formatDate(lastMaintenance)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Next Service:</span>
-              <span className="text-amber-400 font-medium">{formatDate(nextMaintenance)}</span>
+              <span className="text-zinc-600 text-xs">Next Service</span>
+              <span className="text-amber-500 font-medium text-xs font-mono">{formatDate(nextMaintenance)}</span>
             </div>
           </div>
         </div>
 
         {/* Technical Specs */}
-        <div className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4">
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 group hover:border-zinc-700/50 transition-colors">
           <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-5 h-5 text-lime-400" />
-            <span className="text-sm font-medium text-yellow-600">Specifications</span>
+            <Activity className="w-4 h-4 text-zinc-500 group-hover:text-emerald-500 transition-colors" />
+            <span className="text-xs font-medium text-zinc-500">Specifications</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Resolution:</span>
-              <span className="text-white font-medium">{resolution}</span>
+              <span className="text-zinc-600 text-xs">Resolution</span>
+              <span className="text-zinc-300 font-medium text-xs font-mono">{resolution}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Frame Rate:</span>
-              <span className="text-white font-medium">{fps} FPS</span>
+              <span className="text-zinc-600 text-xs">Frame Rate</span>
+              <span className="text-zinc-300 font-medium text-xs font-mono">{fps} FPS</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Uptime:</span>
-              <span className="text-lime-400 font-medium">{uptime}</span>
+              <span className="text-zinc-600 text-xs">Uptime</span>
+              <span className="text-emerald-500 font-medium text-xs font-mono">{uptime}</span>
             </div>
           </div>
         </div>

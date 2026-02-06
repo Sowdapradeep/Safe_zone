@@ -127,7 +127,8 @@ export function VideoMonitor({
         }
       }
 
-      // 4. Simulate anomaly detection every 5-15 seconds (ONLY if NOT processed)
+      // 4. Simulated anomaly detection removed by user request
+      /*
       if (!isProcessed && now - lastAnomalyCheck > Math.random() * 10000 + 5000) {
         lastAnomalyCheck = now;
         // ... (demo logic for non-monitored feeds)
@@ -140,6 +141,7 @@ export function VideoMonitor({
         setAlertActive(true);
         setTimeout(() => setAlertActive(false), 2000);
       }
+      */
 
       animationId = requestAnimationFrame(renderFrame);
     };
@@ -173,41 +175,52 @@ export function VideoMonitor({
   const timeCode = `${formatTime(currentTime)} / ${formatTime(duration)}`;
 
   return (
-    <div className="relative w-full h-full bg-black flex items-center justify-center">
+    <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
       {/* Alert Overlay */}
       {alertActive && (
         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center">
-          <div className="absolute inset-0 bg-red-600/20 animate-pulse border-4 border-red-600" />
-          <div className="bg-red-600 text-white px-8 py-4 rounded-xl flex items-center gap-4 text-2xl font-black uppercase tracking-tighter shadow-2xl shadow-red-600/50">
-            <AlertTriangle className="w-10 h-10 animate-bounce" />
-            <span>Unauthorized Zone Intrusion</span>
-            <AlertTriangle className="w-10 h-10 animate-bounce" />
+          <div className="absolute inset-0 bg-red-600/10 animate-pulse border-[12px] border-red-600/30" />
+          <div className="bg-red-600/90 backdrop-blur-md text-white px-10 py-5 rounded-2xl flex items-center gap-6 text-3xl font-black uppercase tracking-tighter shadow-[0_0_50px_rgba(220,38,38,0.5)] border border-white/20">
+            <AlertTriangle className="w-12 h-12 animate-bounce" />
+            <div className="flex flex-col items-center">
+              <span>Security Breach</span>
+              <span className="text-xs font-mono tracking-widest opacity-80 mt-1">Unauthorized Zone Entry</span>
+            </div>
+            <AlertTriangle className="w-12 h-12 animate-bounce" />
           </div>
         </div>
       )}
 
+      {/* Global CRT Overlay */}
+      <div className="absolute inset-0 pointer-events-none z-30 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_3px,4px_100%] opacity-40 mix-blend-overlay" />
+      <div className="absolute inset-0 pointer-events-none z-30 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+
       {isLiveMode && isMonitoring ? (
         <div className="relative w-full h-full">
           <img
-            src={import.meta.env.VITE_LIVE_FEED_URL || "http://localhost:8000/live-feed"}
-            className="w-full h-full object-contain"
+            src={import.meta.env.VITE_LIVE_FEED_URL || `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/live-feed`}
+            className="w-full h-full object-contain grayscale-[0.2] contrast-125 brightness-110"
             alt="Live Surveillance Feed"
           />
-          <div className="absolute top-4 left-4 z-40 flex items-center gap-3">
-            <div className="bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center gap-2 font-bold text-sm uppercase tracking-wider animate-pulse">
+          <div className="absolute top-6 left-6 z-40 flex items-center gap-4">
+            <div className="bg-red-600 text-white px-4 py-1.5 rounded-lg flex items-center gap-2.5 font-black text-sm uppercase tracking-widest shadow-lg shadow-red-600/30 animate-pulse">
               <div className="w-2.5 h-2.5 bg-white rounded-full" />
-              Live Camera Feed
+              REC
             </div>
-            <div className="bg-zinc-950/80 backdrop-blur-md text-yellow-400 px-3 py-1.5 border border-yellow-900/30 rounded-md font-mono text-sm">
-              Source: CAM-001-NE
+            <div className="bg-black/60 backdrop-blur-md text-zinc-300 px-4 py-1.5 border border-white/10 rounded-lg font-mono text-sm shadow-xl tracking-tight">
+              SOURCE: <span className="text-white font-bold">CAM-001-NE</span>
             </div>
+          </div>
+
+          <div className="absolute bottom-6 right-6 z-40 bg-black/60 backdrop-blur-md text-emerald-500 px-5 py-2 border border-white/10 rounded-lg font-mono text-lg font-black shadow-2xl tracking-widest">
+            {new Date().toLocaleTimeString('en-US', { hour12: false })}
           </div>
         </div>
       ) : videoFile ? (
         <>
           <video
             ref={videoRef}
-            className={`max-w-full max-h-full ${isMonitoring ? 'hidden' : 'block'}`}
+            className={`max-w-full max-h-full grayscale-[0.2] contrast-110 brightness-110 ${isMonitoring ? 'hidden' : 'block'}`}
             controls={!isMonitoring}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
@@ -215,29 +228,29 @@ export function VideoMonitor({
           />
           <canvas
             ref={canvasRef}
-            className={`max-w-full max-h-full ${isMonitoring ? 'block' : 'hidden'}`}
+            className={`max-w-full max-h-full grayscale-[0.2] contrast-110 brightness-110 ${isMonitoring ? 'block' : 'hidden'}`}
           />
 
           {/* Monitoring Indicators */}
           {isMonitoring && (
             <>
-              <div className="absolute top-4 left-4 z-40 flex items-center gap-3">
-                <div className="bg-yellow-600 text-black px-3 py-1.5 rounded-md flex items-center gap-2 font-black text-sm uppercase tracking-wider">
+              <div className="absolute top-6 left-6 z-40 flex items-center gap-4">
+                <div className="bg-yellow-500 text-black px-4 py-1.5 rounded-lg flex items-center gap-2.5 font-black text-sm uppercase tracking-widest shadow-lg shadow-yellow-500/30 transition-all">
                   <Activity className="w-4 h-4 animate-spin" />
-                  Analyzing Recording
+                  AI Analysis Active
                 </div>
-                <div className="bg-zinc-950/80 backdrop-blur-md text-yellow-300 px-3 py-1.5 border border-yellow-900/30 rounded-md font-mono text-sm">
+                <div className="bg-black/60 backdrop-blur-md text-zinc-300 px-4 py-1.5 border border-white/10 rounded-lg font-mono text-sm shadow-xl">
                   {videoFile.name}
                 </div>
               </div>
 
-              <div className="absolute bottom-4 right-4 z-40 flex flex-col items-end gap-2">
-                <div className="bg-zinc-950/80 backdrop-blur-md text-yellow-500 px-4 py-2 border border-yellow-900/30 rounded-md font-mono text-lg font-bold">
-                  TC: {timeCode}
+              <div className="absolute bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+                <div className="bg-black/70 backdrop-blur-md text-zinc-200 px-6 py-3 border border-white/10 rounded-xl font-mono text-xl font-black shadow-2xl tracking-tighter">
+                  TC: <span className="text-yellow-500">{timeCode}</span>
                 </div>
                 {showROI && (
-                  <div className="bg-zinc-950/80 backdrop-blur-md text-yellow-700 px-2 py-1 border border-yellow-900/10 rounded-md text-xs uppercase font-bold tracking-widest">
-                    Detection Zone Visible
+                  <div className="bg-black/50 backdrop-blur-md text-zinc-500 px-3 py-1 border border-white/5 rounded-lg text-[10px] uppercase font-black tracking-widest">
+                    Detection Mesh Active
                   </div>
                 )}
               </div>
@@ -245,12 +258,12 @@ export function VideoMonitor({
           )}
         </>
       ) : (
-        <div className="text-center text-yellow-900/40 p-12">
-          <Activity className="w-24 h-24 mx-auto mb-6 opacity-10" />
-          <p className="text-xl font-bold uppercase tracking-widest">
-            {isLiveMode ? 'Live Feed Standby - Activate to stream' : 'No feed source active - Load recording'}
+        <div className="text-center text-zinc-800 p-12">
+          <Activity className="w-24 h-24 mx-auto mb-6 opacity-5" />
+          <p className="text-xl font-black uppercase tracking-widest opacity-20">
+            {isLiveMode ? 'Waiting for Feed' : 'No Data Stream'}
           </p>
-          <p className="text-sm mt-3 font-medium">Select source from operations panel to begin surveillance</p>
+          <p className="text-xs mt-3 font-mono uppercase tracking-[0.3em] opacity-30">Connect source to initialize</p>
         </div>
       )}
     </div>

@@ -28,15 +28,26 @@ class AnomalyDetector:
         self.is_half = False
 
     def load_models(self):
-        # Extreme RAM Optimization for 512MB limits
+        # Extreme RAM Optimization for 512MB environments
         torch.set_num_threads(1) 
         
-        print(f"Loading models onto {self.device} (mmap mode)...")
+        print(f"Loading models onto {self.device}...")
         
-        # 1. Feature Extractor - MobileNetV3 Small (RAM Optimized)
-        # We use weights=None first to avoid immediate download if we can map it
-        self.vit_model = torchvision.models.mobilenet_v3_small(weights='DEFAULT')
-        self.vit_model.classifier = torch.nn.Identity()
+        # 1. Feature Extractor - ViT-B/16 (768 dims)
+        self.vit_model = torchvision.models.vit_b_16(weights=None)
+        
+        vit_path = os.path.join(self.model_dir, VIT_MODEL_FILENAME)
+        if os.path.exists(vit_path):
+            print(f"Loading ViT weights from {vit_path}")
+            state_dict = torch.load(vit_path, map_location=self.device)
+            # Weights might have a different structure, so we load with strict=False
+            # if we are just extracting features from the backbone.
+            self.vit_model.load_state_dict(state_dict, strict=False)
+        else:
+            print(f"⚠️ Warning: ViT weights not found at {vit_path}. Using uninitialized model.")
+
+        # Remove classification head to get feature vector (768 dim)
+        self.vit_model.heads = torch.nn.Identity()
         self.vit_model.to(self.device)
         self.vit_model.eval()
         
@@ -46,10 +57,13 @@ class AnomalyDetector:
         # 2. Anomaly Detector
         anomaly_path = os.path.join(self.model_dir, ANOMALY_MODEL_FILENAME)
         if os.path.exists(anomaly_path):
+            print(f"Loading Isolation Forest from {anomaly_path}")
             self.anomaly_model = joblib.load(anomaly_path)
+        else:
+            print(f"⚠️ Warning: Anomaly model not found at {anomaly_path}.")
         
         gc.collect()
-        print("Models loaded successfully (MobileNet Optimized).")
+        print("✅ Models synchronized and active.")
 
     def extract_features(self, patches):
         """

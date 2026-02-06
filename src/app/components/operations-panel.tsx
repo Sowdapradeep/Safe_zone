@@ -42,45 +42,48 @@ export function OperationsPanel({
   };
 
   return (
-    <div className="bg-zinc-950/50 border border-yellow-900/30 rounded-lg backdrop-blur-md overflow-hidden">
-      <div className="p-6 border-b border-yellow-900/30 bg-zinc-900/50">
-        <h3 className="text-base font-black text-yellow-400 uppercase tracking-widest flex items-center gap-3">
-          <div className="w-2 h-6 bg-yellow-600 rounded-full" />
+    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl backdrop-blur-md overflow-hidden shadow-xl">
+      <div className="p-5 border-b border-zinc-800/50 bg-black/20">
+        <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest flex items-center gap-3">
+          <div className="w-1.5 h-4 bg-yellow-500 rounded-full shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
           Operations Control
         </h3>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-5 space-y-5">
         {/* Toggle Section */}
-        <div className="bg-zinc-900/50 border border-yellow-900/10 rounded-lg p-5 flex items-center justify-between">
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-4 flex items-center justify-between group hover:border-zinc-700/50 transition-colors">
           <div className="space-y-1">
-            <Label className="text-sm font-bold text-yellow-500 uppercase tracking-wider">Live Camera Mode</Label>
-            <p className="text-xs text-yellow-700">Stream directly from CAM-001-NE</p>
+            <Label className="text-xs font-bold text-zinc-300 uppercase tracking-wider group-hover:text-yellow-500 transition-colors">Live Camera Mode</Label>
+            <p className="text-[10px] text-zinc-500 font-mono">Stream directly from CAM-001-NE</p>
           </div>
           <Switch
             checked={isLiveMode}
             onCheckedChange={onToggleLiveMode}
             disabled={isMonitoring}
-            className="data-[state=checked]:bg-yellow-600"
+            className="data-[state=checked]:bg-yellow-500"
           />
         </div>
 
         {/* Source Section */}
-        <div className="space-y-4">
-          <Label className="text-sm font-bold text-yellow-600 uppercase tracking-widest">Surveillance Source</Label>
+        <div className="space-y-3">
+          <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Surveillance Source</Label>
           <div className="grid grid-cols-1 gap-4">
             <Button
               variant="outline"
               disabled={isMonitoring || isLiveMode || isProcessing}
-              className={`h-24 border-dashed border-2 flex flex-col gap-2 transition-all duration-300 ${isLiveMode ? 'opacity-40' : 'hover:border-yellow-500 hover:bg-yellow-900/10'}`}
+              className={`h-24 border-dashed border-2 flex flex-col gap-2 transition-all duration-300 rounded-xl ${isLiveMode
+                ? 'opacity-40 bg-zinc-900/50 border-zinc-800'
+                : 'bg-zinc-900/50 border-zinc-800 hover:border-yellow-500/50 hover:bg-yellow-500/5'
+                }`}
               onClick={() => document.getElementById('video-upload')?.click()}
             >
-              <Upload className={`w-8 h-8 ${isLiveMode || isMonitoring ? 'text-zinc-700' : 'text-yellow-600 animate-bounce'}`} />
+              <Upload className={`w-6 h-6 ${isLiveMode || isMonitoring ? 'text-zinc-600' : 'text-yellow-500 group-hover:scale-110 transition-transform'}`} />
               <div className="text-center">
-                <span className="block text-sm font-bold text-yellow-400">
+                <span className={`block text-xs font-bold ${isLiveMode ? 'text-zinc-600' : 'text-zinc-300'}`}>
                   {isLiveMode ? 'Recording Disabled' : uploadedFileName || 'Load Stream Recording'}
                 </span>
-                <span className="text-[10px] text-yellow-800 uppercase tracking-widest">MP4 / MKV / AVI</span>
+                <span className="text-[10px] text-zinc-600 uppercase tracking-widest mt-1">MP4 / MKV / AVI</span>
               </div>
             </Button>
             <input
@@ -94,49 +97,50 @@ export function OperationsPanel({
         </div>
 
         {/* Action Button */}
-        <div className="pt-2">
+        <div className="pt-1">
           {!isMonitoring ? (
             <Button
-              className="w-full h-16 bg-yellow-600 hover:bg-yellow-500 text-black font-black text-lg uppercase tracking-widest shadow-lg shadow-yellow-600/20"
+              className="w-full h-14 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black font-black text-sm uppercase tracking-widest shadow-lg shadow-yellow-500/20 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
               onClick={onStartMonitoring}
               disabled={isProcessing || (!isLiveMode && !hasVideo)}
             >
               {isProcessing ? (
                 <>
-                  <RotateCcw className="w-6 h-6 mr-3 animate-spin" />
+                  <RotateCcw className="w-5 h-5 mr-3 animate-spin" />
                   Processing Stream...
                 </>
               ) : (
                 <>
-                  <Play className="w-6 h-6 mr-3 fill-current" />
+                  <Play className="w-5 h-5 mr-3 fill-current" />
                   {isLiveMode ? 'Start Live Feed' : 'Initiate Monitoring'}
                 </>
               )}
             </Button>
           ) : (
             <Button
-              className="w-full h-16 bg-red-600 hover:bg-red-500 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-600/20"
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-black text-sm uppercase tracking-widest shadow-lg shadow-red-500/20 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
               onClick={onStopMonitoring}
             >
-              <Square className="w-6 h-6 mr-3 fill-current" />
+              <Square className="w-5 h-5 mr-3 fill-current" />
               Cease Surveillance
             </Button>
           )}
         </div>
 
         {/* ROI Toggle */}
-        <div className="flex items-center justify-between bg-zinc-900/40 border border-yellow-900/20 rounded-lg p-5">
+        <div className="flex items-center justify-between bg-black/40 border border-zinc-800/50 rounded-lg p-4 group hover:border-zinc-700/50 transition-colors">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="roi-toggle" className="text-sm font-bold text-yellow-200 cursor-pointer">
+            <Label htmlFor="roi-toggle" className="text-xs font-bold text-zinc-300 cursor-pointer group-hover:text-yellow-500 transition-colors">
               Restricted Zone Overlay
             </Label>
-            <span className="text-[10px] text-yellow-900 font-bold uppercase tracking-wider">Detection Boundary Visualization</span>
+            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">Detection Boundary</span>
           </div>
           <Switch
             id="roi-toggle"
             checked={showROI}
             onCheckedChange={onToggleROI}
             disabled={!isMonitoring}
+            className="data-[state=checked]:bg-yellow-500"
           />
         </div>
 
@@ -145,20 +149,20 @@ export function OperationsPanel({
           onClick={onScanIncidents}
           disabled={!isMonitoring}
           variant="outline"
-          className="w-full border-yellow-900/30 hover:bg-yellow-900/10 text-yellow-600 h-12 text-sm font-bold uppercase tracking-widest"
+          className="w-full border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 hover:text-white h-10 text-xs font-bold uppercase tracking-widest transition-colors"
         >
-          <Search className="w-5 h-5 mr-3" />
+          <Search className="w-4 h-4 mr-2" />
           Manual Incident Scan
         </Button>
       </div>
 
       {/* Footer Status */}
-      <div className="bg-zinc-900 p-4 flex items-center justify-between border-t border-yellow-900/30">
+      <div className="bg-black/20 p-4 flex items-center justify-between border-t border-zinc-800/50">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-lime-500 animate-pulse' : 'bg-yellow-900'}`} />
-          <span className="text-[10px] font-black text-yellow-800 uppercase tracking-[0.2em]">System Status</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${isMonitoring ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-700'}`} />
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">System Status</span>
         </div>
-        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isMonitoring ? 'text-lime-400' : 'text-yellow-900'}`}>
+        <span className={`text-[10px] font-bold uppercase tracking-widest ${isMonitoring ? 'text-emerald-500' : 'text-zinc-600'}`}>
           {isMonitoring ? 'Operational' : 'Standby'}
         </span>
       </div>

@@ -76,27 +76,28 @@ export function IncidentLog({
   };
 
   return (
-    <div className="bg-zinc-950 border border-yellow-900/30 rounded-lg h-full flex flex-col">
-      <div className="p-5 border-b border-yellow-900/30">
-        <h3 className="text-base font-bold text-yellow-400 uppercase tracking-wider mb-4">
+    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl h-full flex flex-col backdrop-blur-md shadow-xl overflow-hidden">
+      <div className="p-5 border-b border-zinc-800/50 bg-black/20">
+        <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-yellow-500 rounded-full shadow-[0_0_10px_rgba(234,179,8,0.3)]" />
           Incident Management
         </h3>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {['all', 'open', 'in-progress', 'closed'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 text-sm font-medium rounded ${filter === f
-                  ? 'bg-yellow-600 text-black font-semibold'
-                  : 'bg-zinc-900 border border-yellow-900/30 text-yellow-700 hover:bg-zinc-800'
+              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${filter === f
+                ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
+                : 'bg-zinc-800/50 border border-zinc-700/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
                 }`}
             >
-              {f === 'all' ? 'All' : f.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              {f === 'all' ? 'All' : f.replace('-', ' ')}
               {f !== 'all' && (
-                <span className="ml-1.5">
-                  ({incidents.filter(i => i.status === f).length})
+                <span className={`ml-1.5 opacity-60 ${filter === f ? 'text-black' : 'text-zinc-400'}`}>
+                  {incidents.filter(i => i.status === f).length}
                 </span>
               )}
             </button>
@@ -105,72 +106,68 @@ export function IncidentLog({
       </div>
 
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredIncidents.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <AlertTriangle className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p className="text-base">No incidents to display</p>
+            <div className="text-center py-16 text-zinc-600">
+              <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p className="text-xs font-mono uppercase tracking-widest">No active incidents</p>
             </div>
           ) : (
-            filteredIncidents.map((incident) => (
+            filteredIncidents.map((incident, index) => (
               <div
-                key={incident.id}
-                className="bg-zinc-900 border border-yellow-900/30 rounded-lg p-4 space-y-3"
+                key={incident.id || (incident as any)._id || index}
+                className="bg-black/40 border border-zinc-800/50 rounded-xl p-4 space-y-4 group hover:border-zinc-700/50 transition-all hover:shadow-lg"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge className={`${getSeverityColor(incident.severity)} border text-xs font-semibold`}>
+                      <Badge className={`${getSeverityColor(incident.severity)} border-0 text-[10px] font-bold px-2 py-0.5 rounded-full`}>
                         {incident.severity.toUpperCase()}
                       </Badge>
-                      <Badge className={`${getStatusColor(incident.status)} border text-xs flex items-center gap-1.5 font-semibold`}>
+                      <Badge className={`${getStatusColor(incident.status)} border-0 text-[10px] flex items-center gap-1.5 font-bold px-2 py-0.5 rounded-full`}>
                         {getStatusIcon(incident.status)}
                         {incident.status.toUpperCase().replace('-', ' ')}
                       </Badge>
                     </div>
-                    <h4 className="text-base font-semibold text-white leading-tight">
+                    <h4 className="text-sm font-bold text-zinc-100 leading-tight">
                       {incident.incidentType}
                     </h4>
                   </div>
-                  <div className="text-xs text-gray-500 whitespace-nowrap">
-                    {formatTimestamp(incident.timestamp)}
+                  <div className="text-[10px] text-zinc-600 font-mono bg-zinc-900/50 px-2 py-1 rounded border border-zinc-800/50">
+                    {formatTimestamp(incident.timestamp).split(',')[1]}
                   </div>
                 </div>
 
                 {/* Details */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Camera:</span>
-                    <span className="text-white ml-2 font-mono font-medium">{incident.cameraId}</span>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-mono">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-600 uppercase tracking-tighter">Source</span>
+                    <span className="text-zinc-300 font-bold">{incident.cameraId}</span>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Zone:</span>
-                    <span className="text-white ml-2 font-medium">{incident.zone}</span>
+                  <div className="flex flex-col">
+                    <span className="text-zinc-600 uppercase tracking-tighter">Confidence</span>
+                    <span className="text-emerald-500 font-bold">{(incident.confidence * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500">Location:</span>
-                    <span className="text-white ml-2 font-medium">{incident.location}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Confidence:</span>
-                    <span className="text-yellow-400 ml-2 font-mono font-medium">
-                      {(incident.confidence * 100).toFixed(1)}%
-                    </span>
+                  <div className="col-span-2 flex flex-col">
+                    <span className="text-zinc-600 uppercase tracking-tighter">Zone</span>
+                    <span className="text-zinc-300">{incident.zone}</span>
                   </div>
                 </div>
 
-                <p className="text-sm text-yellow-600 border-t border-yellow-900/30 pt-3 leading-relaxed">
-                  {incident.description}
-                </p>
+                <div className="relative">
+                  <p className="text-[11px] text-zinc-400 border-l-2 border-yellow-500/30 pl-3 leading-relaxed italic">
+                    {incident.description}
+                  </p>
+                </div>
 
                 {/* Actions */}
                 {incident.status === 'open' && (
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-2 pt-1">
                     <Button
                       size="sm"
                       onClick={() => onAcknowledge(incident.id)}
-                      className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-black font-semibold text-sm h-10"
+                      className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-[11px] py-4 rounded-lg shadow-lg shadow-yellow-500/10"
                     >
                       Acknowledge
                     </Button>
@@ -178,7 +175,7 @@ export function IncidentLog({
                       size="sm"
                       variant="outline"
                       onClick={() => onMarkFalseAlarm(incident.id)}
-                      className="flex-1 border-yellow-700 text-yellow-300 hover:bg-zinc-800 text-sm h-10"
+                      className="flex-1 border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-[11px] py-4 rounded-lg"
                     >
                       False Alarm
                     </Button>
@@ -189,7 +186,7 @@ export function IncidentLog({
                   <Button
                     size="sm"
                     onClick={() => onResolve(incident.id)}
-                    className="w-full bg-lime-600 hover:bg-lime-700 text-black font-semibold text-sm h-10"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-[11px] py-4 rounded-lg shadow-lg shadow-emerald-500/10"
                   >
                     Mark Resolved
                   </Button>

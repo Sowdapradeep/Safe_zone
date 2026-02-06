@@ -53,69 +53,72 @@ export function SystemStatusPanel({
   };
 
   return (
-    <div className="bg-slate-950/50 border border-cyan-900/30 rounded-lg p-5 space-y-5 backdrop-blur-md">
+    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-5 space-y-5 backdrop-blur-md shadow-xl">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-cyan-400 uppercase tracking-wider">
+        <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest">
           System Status
         </h3>
-        <div className={`${getSystemStateColor()} px-3 py-1.5 rounded text-white text-sm font-bold`}>
+        <div className={`px-3 py-1.5 rounded-full text-white text-[10px] font-bold tracking-widest uppercase shadow-lg ${systemState === 'monitoring' ? 'bg-emerald-500 shadow-emerald-500/20' :
+            systemState === 'alert' ? 'bg-red-500 shadow-red-500/20 animate-pulse' :
+              'bg-zinc-700'
+          }`}>
           {getSystemStateText()}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         {/* Camera Health */}
-        <div className="bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4 transition-all hover:border-cyan-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Camera className={`w-5 h-5 ${getCameraHealthColor()}`} />
-            <span className="text-sm font-medium text-slate-400">Camera Status</span>
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 transition-all hover:border-emerald-500/30 group">
+          <div className="flex items-center gap-2 mb-2">
+            <Camera className={`w-4 h-4 ${getCameraHealthColor()} group-hover:scale-110 transition-transform`} />
+            <span className="text-xs font-medium text-zinc-500">Camera Status</span>
           </div>
-          <div className={`text-2xl font-bold ${getCameraHealthColor()} mb-2`}>
+          <div className={`text-xl font-bold ${getCameraHealthColor()} mb-1`}>
             {cameraHealth.toUpperCase()}
           </div>
-          <div className="text-sm text-gray-400">
+          <div className="text-[10px] text-zinc-600 font-mono">
             {onlineCameras} / {totalCameras} Online
           </div>
         </div>
 
         {/* Threat Level */}
-        <div className="bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4 transition-all hover:border-cyan-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Shield className="w-5 h-5 text-cyan-500" />
-            <span className="text-sm font-medium text-slate-400">Threat Level</span>
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 transition-all hover:border-red-500/30 group">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-4 h-4 text-zinc-400 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-medium text-zinc-500">Threat Level</span>
           </div>
-          <Badge className={`${getThreatLevelColor()} border-0 text-lg font-bold px-3 py-1`}>
+          <Badge className={`${getThreatLevelColor()} border-0 text-sm font-bold px-2 py-0.5`}>
             {threatLevel.toUpperCase()}
           </Badge>
         </div>
 
         {/* System Activity */}
-        <div className="bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4 transition-all hover:border-cyan-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-5 h-5 text-cyan-400" />
-            <span className="text-sm font-medium text-slate-400">Activity</span>
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 transition-all hover:border-cyan-500/30 group">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="w-4 h-4 text-zinc-400 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-medium text-zinc-500">Activity</span>
           </div>
-          <div className="text-2xl font-bold text-cyan-400">
+          <div className="text-lg font-bold text-zinc-200">
             {systemState === 'monitoring' ? 'ACTIVE' : 'STANDBY'}
           </div>
         </div>
 
         {/* AI Confidence */}
-        <div className="bg-slate-900/40 border border-cyan-900/20 rounded-lg p-4 transition-all hover:border-cyan-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className="w-5 h-5 text-cyan-400" />
-            <span className="text-sm font-medium text-slate-400">AI Confidence</span>
+        <div className="bg-black/40 border border-zinc-800/50 rounded-lg p-3 transition-all hover:border-violet-500/30 group">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 text-zinc-400 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-medium text-zinc-500">AI Confidence</span>
           </div>
-          <div className="text-2xl font-bold text-cyan-400">
+          <div className="text-xl font-bold text-white font-mono">
             {anomalyConfidence ? `${(anomalyConfidence * 100).toFixed(1)}%` : '--'}
           </div>
         </div>
       </div>
 
       {/* AI Detection Info */}
-      <div className="bg-cyan-950/20 border border-cyan-800/40 rounded-lg p-4">
-        <p className="text-sm leading-relaxed text-slate-300">
-          <strong className="text-cyan-400">AI Anomaly Detection:</strong> Behavior analysis system. No facial recognition.
+      <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-lg p-3">
+        <p className="text-xs leading-relaxed text-zinc-400">
+          <strong className="text-emerald-500">AI Active:</strong> Behavior analysis system online.
         </p>
       </div>
     </div>
